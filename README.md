@@ -50,7 +50,7 @@ jarvis --reset
 Jarvis Conversationalist requires Python 3.11 or later.  
 Go to the Python official website and download the version 3.11 for Mac.
 or just download this... 
-(https://ww= w.python.org/ftp/python/3.11.0/python-3.11.0-macos11.pkg)[https://ww= w.python.org/ftp/python/3.11.0/python-3.11.0-macos11.pkg]
+(https://www.python.org/ftp/python/3.11.0/python-3.11.0-macos11.pkg)[https://www.python.org/ftp/python/3.11.0/python-3.11.0-macos11.pkg]
 Open the downloaded file and follow the installation instructions.  
   
 
