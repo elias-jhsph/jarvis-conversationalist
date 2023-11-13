@@ -1,12 +1,15 @@
 import logging
 import os
-import sys
 from logging.handlers import RotatingFileHandler
 
-level_path = "logs/level.txt"
-logger_path = "logs/jarvis_process.log"
-if getattr(sys, 'frozen', False):
-    logger_path = os.path.join(sys._MEIPASS, "logs/jarvis_process.log")
+
+user_home = os.path.expanduser("~")
+logs_dir = os.path.join(user_home, "Jarvis Logs")
+if not os.path.exists(logs_dir):
+    os.mkdir(logs_dir)
+
+level_path = os.path.join(logs_dir, "level.txt")
+logger_path = os.path.join(logs_dir, "jarvis_process.log")
 
 # Set up a logger
 logging.basicConfig(level=logging.INFO,

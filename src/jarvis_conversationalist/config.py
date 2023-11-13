@@ -2,9 +2,13 @@ import os
 import json
 from cryptography.fernet import Fernet
 
+user_home = os.path.expanduser("~")
+logs_dir = os.path.join(user_home, "Jarvis Logs")
+if not os.path.exists(logs_dir):
+    os.mkdir(logs_dir)
 
-CONFIG_FILE = 'config.json'
-KEY_FILE = 'key.key'
+CONFIG_FILE = os.path.join(logs_dir, 'config.json')
+KEY_FILE = os.path.join(logs_dir, 'key.key')
 USER = "User"
 KEY = None
 file = {}

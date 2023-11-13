@@ -7,6 +7,9 @@ import io
 import re
 from gtts import gTTS
 
+audio_folder = os.path.join(os.path.expanduser("~"), "Jarvis Logs", "temp_audio")
+if not os.path.exists(audio_folder):
+    os.mkdir(audio_folder)
 
 if sys.platform == 'darwin':
     out = subprocess.run(['say', '-v', '?'], capture_output=True)
@@ -186,9 +189,6 @@ def text_to_speech(text: str, model="gpt-4", stream=False):
     :return: The path to the audio file or the audio content as a stream.
     :rtype: str or bytes
     """
-    audio_folder = "audio_output/"
-    if getattr(sys, 'frozen', False):
-        audio_folder = os.path.join(sys._MEIPASS, audio_folder)
     slow_flag = True
     if model.find("gpt-4") >= 0:
         slow_flag = False

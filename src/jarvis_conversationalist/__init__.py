@@ -16,6 +16,7 @@ if get_openai_key() is None:
         print("Please set your OpenAI API key using the --key argument once to cache your key.")
 else:
     os.environ["OPENAI_API_KEY"] = get_openai_key()
+
 from .conversationalist import prep_mic, process_assistant_response, converse
-__version__ = '1.0.0'
+__version__ = '0.1.4'
 # Path: src/jarvis_conversationalist/conversationalist.py
