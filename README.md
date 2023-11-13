@@ -42,6 +42,88 @@ To reset the saved username and key, use the `--reset` command-line argument:
 jarvis --reset
 ```
 
+## Non Technical Installation Instructions
+
+**Installing Jarvis Conversationalist on a Mac**\=
+
+1\. Install Python:  
+Jarvis Conversationalist requires Python 3.11 or later.  
+Go to the Python official website and download the version 3.11 for Mac.
+or just download this... 
+(https://ww= w.python.org/ftp/python/3.11.0/python-3.11.0-macos11.pkg)[https://ww= w.python.org/ftp/python/3.11.0/python-3.11.0-macos11.pkg]
+Open the downloaded file and follow the installation instructions.  
+  
+
+2\. Install Homebrew (if you don't have it installed already):
+
+In Terminal, type:
+
+```bash
+brew install portaudio
+```
+
+Then press Enter.
+
+If that doesn't work then you need to install homebrew.
+
+Homebrew is a package manager for Mac that simplifies the installation of software.  
+Open the Terminal app on your Mac (you can find it in Applications > Utilities).  
+Copy and paste the following command into Terminal and press Enter:
+```bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+```
+Follow the on-screen instructions to complete the installation.  
+  
+
+3\. Install Portaudio
+Portaudio is needed for the audio functionalities of Jarvis.  
+In Terminal, type:
+
+```bash
+brew install portaudio
+```
+
+Then press Enter.
+
+  
+4\. Install Jarvis Conversationalist:  
+In Terminal, type:
+
+```bash
+pip3.11 install jarvis_conversational
+```
+
+Then press Enter.  
+Wait for the installation to complete.
+  
+Finding Your OpenAI API Key  
+5\. Create Open an OpenAI Account:  
+Visit OpenAI's website and sign up or log in.<= br>After logging in, navigate to the API section.
+(https://platform.openai.com/api-keys)[https://platform.openai.com/api-keys] 
+
+
+6\. Generate an API Key:  
+In the API section, you should see an option to create a new API key.  
+Follow the instructions to generate a new key.  
+Once generated, make sure to copy and save your API key in a secure place.  
+Using Jarvis Conversationalist  
+
+7\. Start the Application:  
+  
+To set your OpenAI API username and key, use:  
+```bash
+jarvis --u= ser YOUR\_USERNAME --key YOUR\_KEY 
+```
+Replace YOUR\_USERNAME and YOUR\_KEY = with your actual OpenAI username and API key.  
+After your first successful use go to terminal](3D"http=)
+
+```bash
+jarvis
+```
+
+Then press Enter, to use Jarvis!  
+
+
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a pull request.
