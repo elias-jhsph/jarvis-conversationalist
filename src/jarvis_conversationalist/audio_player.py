@@ -73,7 +73,7 @@ def _play_audio_file_blocking(file_path: str, stop_event: threading.Event, loops
     if isinstance(file_path, list):
         files_updated = []
         for file in file_path:
-            file = pkg_resources.path('jarvis_conversationalist.audio_files', file)
+            file = str(pkg_resources.files('jarvis_conversationalist').joinpath('audio_files').joinpath(file))
             files_updated.append(file)
         file_path = files_updated
         if isinstance(loops, list) and isinstance(destroy, list):
@@ -87,7 +87,7 @@ def _play_audio_file_blocking(file_path: str, stop_event: threading.Event, loops
                 _play_audio_file_blocking(file, stop_event, loops, delay, destroy, added_stop_event)
         return
     else:
-        file_path = pkg_resources.path('jarvis_conversationalist.audio_files', file_path)
+        file_path = str(pkg_resources.files('jarvis_conversationalist').joinpath('audio_files').joinpath(file_path))
         chunk = 8196
         if audio_stream is not None:
             logger.info("Audio stream already exists, closing it...")
