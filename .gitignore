@@ -9,3 +9,7 @@ logs/*
 audio_output/*
 venv/*
 .DS_Store
+dist/*
+dist
+src/jarvis_conversationalist.egg-info/*
+src/jarvis_conversationalist.egg-info

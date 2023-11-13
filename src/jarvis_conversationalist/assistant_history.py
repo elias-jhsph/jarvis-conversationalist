@@ -180,7 +180,6 @@ class AssistantHistory:
         else:
             self.history = self.client.get_or_create_collection(name="history")
             self.summaries = self.client.get_or_create_collection(name="summaries")
-        self.current_user_query = None
 
     def create_chat_id(self):
         """

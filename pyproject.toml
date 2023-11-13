@@ -1,19 +1,21 @@
-[metadata]
-name = jarvis_conversationalist
-version = 0.1.0
-author = Elias Weston-Farber
-author_email = eweston4@jhu.edu
-description = A voice assitant for the command line
-long_description = file: README.md
-long_description_content_type = text/markdown
-url = https://github.com/elias-jhsph/jarvis-conversationalist
-classifiers =
-    Programming Language :: Python :: 3
-    License :: OSI Approved :: General Public License v3 (GPLv3)
-    Operating System :: OS Independent
+[project]
+name = "jarvis_conversationalist"
+version = "0.1.0"
+authors = [{name="Elias Weston-Farber", email="eweston4@jhu.edu"}]
+description = "A voice assitant for the command line"
+readme = "README.md"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: General Public License v3 (GPLv3)",
+    "Operating System :: OS Independent",
+]
+[project.urls]
+url = "https://github.com/elias-jhsph/jarvis-conversationalist"
 [options]
-python_requires = >=3.11
-packages = find:
+python_requires = ">=3.11"
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
 [tool.poetry.dependencies]
 openai-whisper = "20231106"
 openai = "1.2.3"
