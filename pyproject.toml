@@ -14,19 +14,10 @@ url = "https://github.com/elias-jhsph/jarvis-conversationalist"
 [options]
 python_requires = ">=3.11"
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=61.0", "wheel", "openai-whisper=20231106","openai=1.2.3",
+    "chromadb<0.4.15","soundfile=0.12.1","PyAudio=0.2.14","pydub=0.25.1",
+    "gtts=2.4.0","spacy=3.7.2","beautifulsoup4=4.12.2","googlesearch-python=1.2.3",
+    "tiktoken=0.5.1","geocoder=1.38.1","scrapy=2.11.0"
+]
 build-backend = "setuptools.build_meta"
-[tool.poetry.dependencies]
-openai-whisper = "20231106"
-openai = "1.2.3"
-chromadb = "<0.4.15"
-soundfile = "0.12.1"
-PyAudio = "0.2.14"
-pydub = "0.25.1"
-gtts = "2.4.0"
-spacy = "3.7.2"
-beautifulsoup4 = "4.12.2"
-googlesearch-python = "1.2.3"
-tiktoken = "0.5.1"
-geocoder = "1.38.1"
-scrapy = "2.11.0"
+
