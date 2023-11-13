@@ -23,7 +23,7 @@ pip install jarvis_conversationalist
 To start the application, run the `cli.py` script from the command line:
 
 ```bash
-python3.11 -m jarvis_conversationalist 
+jarvis
 ```
 
 You can interrupt the conversation by pressing "Enter". To quit the application, press "Esc" then "Enter".
@@ -33,13 +33,13 @@ You can interrupt the conversation by pressing "Enter". To quit the application,
 You can set your OpenAI API username and key using the `--user` and `--key` command-line arguments, respectively:
 
 ```bash
-python3.11 -m jarvis_conversationalist --user YOUR_USERNAME --key YOUR_KEY
+jarvis --user YOUR_USERNAME --key YOUR_KEY
 ```
 
 To reset the saved username and key, use the `--reset` command-line argument:
 
 ```bash
-python3.11 -m jarvis_conversationalist --reset
+jarvis --reset
 ```
 
 ## Contributing
