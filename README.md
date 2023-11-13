@@ -11,12 +11,11 @@ Jarvis Conversationalist is a Python-based project that provides a conversationa
 
 ## Installation
 
-This project requires Python 3.11 or later. Clone the repository and install the required packages using pip:
+This project requires Python 3.11 or later. For mac, install portaudio and then pip install the package:
 
 ```bash
-git clone https://github.com/elias-jhsph/jarvis-conversationalist.git
-cd jarvis-conversationalist
-pip install -r requirements.txt
+brew install portaudio
+pip install jarvis_conversationalist
 ```
 
 ## Usage
@@ -24,7 +23,7 @@ pip install -r requirements.txt
 To start the application, run the `cli.py` script from the command line:
 
 ```bash
-python src/jarvis_conversationalist/cli.py
+python3.11 -m jarvis_conversationalist 
 ```
 
 You can interrupt the conversation by pressing "Enter". To quit the application, press "Esc" then "Enter".
@@ -34,13 +33,13 @@ You can interrupt the conversation by pressing "Enter". To quit the application,
 You can set your OpenAI API username and key using the `--user` and `--key` command-line arguments, respectively:
 
 ```bash
-python src/jarvis_conversationalist/cli.py --user YOUR_USERNAME --key YOUR_KEY
+python3.11 -m jarvis_conversationalist --user YOUR_USERNAME --key YOUR_KEY
 ```
 
 To reset the saved username and key, use the `--reset` command-line argument:
 
 ```bash
-python src/jarvis_conversationalist/cli.py --reset
+python3.11 -m jarvis_conversationalist --reset
 ```
 
 ## Contributing
