@@ -15,11 +15,14 @@ from pyaudio import PyAudio, paInt16, get_sample_size
 import whisper
 import warnings
 import signal
+from .config import get_openai_key
+os.environ["OPENAI_API_KEY"] = get_openai_key()
 
 from .openai_utility_functions import check_for_directed_at_me, check_for_completion, extract_query
 from .openai_interface import stream_response, resolve_response, use_tools, schedule_refresh_assistant
 from .streaming_response_audio import stream_audio_response
 from .audio_player import play_audio_file
+
 
 from .logger_config import get_logger
 logger = get_logger()
@@ -192,14 +195,13 @@ def audio_capture_process(audio_queue, speaking, current_recording_tag):
                 audio_queue.put((audio_data, current_tag))
 
 
-def audio_processing_process(audio_queue, text_queue, speaking, current_transcribing_tag, started_listening_event):
+def audio_processing_process(audio_queue, text_queue, speaking, current_transcribing_tag):
     """
     Transcribes audio from the audio queue and puts it in the text queue.
     :param audio_queue:
     :param text_queue:
     :param speaking:
     :param current_transcribing_tag:
-    :param started_listening_event:
     :return:
     """
     current_tag = 0
@@ -209,7 +211,6 @@ def audio_processing_process(audio_queue, text_queue, speaking, current_transcri
         if not speaking.is_set():
             audio_data, audio_tag = audio_queue.get()
             if not speaking.is_set() and audio_tag == current_tag:
-                started_listening_event.set()
                 text = convert_to_text(audio_data)
                 if not speaking.is_set():
                     while not current_transcribing_tag.empty():
@@ -264,6 +265,7 @@ def converse(memory, interrupt_event=None, ready_event=None):
         interrupt_event = multiprocessing.Event()
     if ready_event is None:
         ready_event = multiprocessing.Event()
+        ready_event.set()
 
     audio_queue = multiprocessing.Queue()
     text_queue = multiprocessing.Queue()
@@ -275,7 +277,7 @@ def converse(memory, interrupt_event=None, ready_event=None):
     capture_process = multiprocessing.Process(target=audio_capture_process,
                                               args=(audio_queue, speaking, current_recording_tag))
     processing_process = multiprocessing.Process(target=audio_processing_process,
-                                                 args=(audio_queue, text_queue, speaking, current_transcribing_tag, ready_event))
+                                                 args=(audio_queue, text_queue, speaking, current_transcribing_tag))
 
     capture_process.start()
     processing_process.start()
@@ -285,8 +287,11 @@ def converse(memory, interrupt_event=None, ready_event=None):
     timestamps = []
 
     schedule_refresh_assistant()
-    ready_event.wait()
     play_audio_file("audio_files/tone_one.wav", blocking=False)
+    tone = time.time()
+    while audio_queue.empty() and time.time() - tone < 10:
+        pass
+    ready_event.set()
     last_response_time = None
     current_tag = 1
     current_transcribing_tag.put(current_tag)

@@ -3,9 +3,12 @@ import multiprocessing
 import threading
 import requests
 from bs4 import BeautifulSoup
-import openai
+from openai import OpenAI, _utils
 from googlesearch import search as google_search
 from tiktoken import encoding_for_model
+
+client = OpenAI()
+_utils._logs.logger.setLevel("CRITICAL")
 
 basic_model = "gpt-3.5-turbo-16k"
 advanced_model = "gpt-4"
@@ -42,27 +45,25 @@ def refine_query(query: str) -> str:
     :return: The refined query.
     :rtype: str
     """
-    response = openai.ChatCompletion.create(
-        model=advanced_model,
-        messages=[{"role": "user", "content":
-                   f"Please help me improve this search query for better results: '{query}'. Add context and keywords "
-                   "you think help better capture the idea behind the query. The response you send will go directly "
-                   "into google. Here is a helpful reminder of google tools you can use but consider not using them "
-                   "if you don't think you need them. Make sure some keywords aren't in quotes or you risk "
-                   "only getting results with those exact words in that order:\n\n"
-                   'Quotes (""): Use quotes to search for an exact phrase or word order.\n'
-                   "Minus (-): Exclude a specific word from your search.\n"
-                   "Asterisk (*): Use as a placeholder for unknown words.\n"
-                   "OR: Search for multiple terms or phrases.\n"
-                   "intitle: (intitle:): Search for words specifically in the title of webpages.\n"
-                   "intext: (intext:): Search for words specifically in the body of webpages.\n"
-                   "Note: Do not be so specific in your search that you miss the general point of the query. Also "
-                   "DO NOT SURROUND THE ENTIRE QUERY BY QUOTES.\n Query:"}],
-        max_tokens=100,
-        n=1,
-        temperature=temperature,
-    )
-    refined_query = response['choices'][0]['message']['content']
+    response = client.chat.completions.create(model=advanced_model,
+    messages=[{"role": "user", "content":
+               f"Please help me improve this search query for better results: '{query}'. Add context and keywords "
+               "you think help better capture the idea behind the query. The response you send will go directly "
+               "into google. Here is a helpful reminder of google tools you can use but consider not using them "
+               "if you don't think you need them. Make sure some keywords aren't in quotes or you risk "
+               "only getting results with those exact words in that order:\n\n"
+               'Quotes (""): Use quotes to search for an exact phrase or word order.\n'
+               "Minus (-): Exclude a specific word from your search.\n"
+               "Asterisk (*): Use as a placeholder for unknown words.\n"
+               "OR: Search for multiple terms or phrases.\n"
+               "intitle: (intitle:): Search for words specifically in the title of webpages.\n"
+               "intext: (intext:): Search for words specifically in the body of webpages.\n"
+               "Note: Do not be so specific in your search that you miss the general point of the query. Also "
+               "DO NOT SURROUND THE ENTIRE QUERY BY QUOTES.\n Query:"}],
+    max_tokens=100,
+    n=1,
+    temperature=temperature)
+    refined_query = response.choices[0].message.content
     return refined_query
 
 
@@ -97,17 +98,15 @@ def summarize(content: str, refined_query: str) -> str:
     :return: The summary.
     :rtype: str
     """
-    response = openai.ChatCompletion.create(
-        model=basic_model,
-        messages=[{'role': 'system', 'content': f'There was a search for the following query:\n"{refined_query}"\nPlease '
-                                              f'provide a concise summary of the following content while keeping mind '
-                                              f'what will best respond to the search query:\n{content}\n'}],
-        max_tokens=400,
-        n=1,
-        stop=None,
-        temperature=temperature,
-    )
-    summary = response['choices'][0]['message']['content']
+    response = client.chat.completions.create(model=basic_model,
+    messages=[{'role': 'system', 'content': f'There was a search for the following query:\n"{refined_query}"\nPlease '
+                                          f'provide a concise summary of the following content while keeping mind '
+                                          f'what will best respond to the search query:\n{content}\n'}],
+    max_tokens=400,
+    n=1,
+    stop=None,
+    temperature=temperature)
+    summary = response.choices[0].message.content
     return summary
 
 
@@ -143,17 +142,15 @@ def rank_relevance(url: str, summary: str, query: str) -> int:
               }
               }
 
-    response = openai.ChatCompletion.create(
-        model=advanced_model,
-        messages=[{'role': 'system', 'content': prompt}],
-        max_tokens=100,
-        n=1,
-        stop=None,
-        temperature=temperature,
-        tools=[schema],
-        tool_choice={"type": "function", "function": {"name": "store_rank_relevance"}}
-    )
-    relevance_raw = response.choices[0]['message']['tool_calls'][0]['function']['arguments']
+    response = client.chat.completions.create(model=advanced_model,
+    messages=[{'role': 'system', 'content': prompt}],
+    max_tokens=100,
+    n=1,
+    stop=None,
+    temperature=temperature,
+    tools=[schema],
+    tool_choice={"type": "function", "function": {"name": "store_rank_relevance"}})
+    relevance_raw = response.choices[0].message.tool_calls[0].function.arguments
     relevance = int(json.loads(relevance_raw)['relevance'])
     return relevance
 
@@ -168,15 +165,13 @@ def synthesize_information(summaries: list, query: str) -> str:
     :type query: str
     """
     summaries_text = "\n".join([f"Summary {i + 1}: {summary}" for i, (url, summary) in enumerate(summaries)])
-    response = openai.ChatCompletion.create(
-        model=advanced_model,
-        messages=[{"role": "system", "content": f"Given the following summaries about '{query}', please synthesize "
-                                                f"a coherent and comprehensive response:\n{summaries_text}\n"}],
-        max_tokens=500,
-        n=1,
-        temperature=temperature,
-    )
-    synthesized_info = response['choices'][0]['message']['content']
+    response = client.chat.completions.create(model=advanced_model,
+    messages=[{"role": "system", "content": f"Given the following summaries about '{query}', please synthesize "
+                                            f"a coherent and comprehensive response:\n{summaries_text}\n"}],
+    max_tokens=500,
+    n=1,
+    temperature=temperature)
+    synthesized_info = response.choices[0].message.content
     return synthesized_info
 
 

@@ -5,16 +5,21 @@ import time
 import wave
 import io
 import warnings
+import spacy
 from queue import Queue
 from numpy import frombuffer, int16
 from pyaudio import PyAudio, paInt16
-import en_core_web_sm
 from typing import Iterator, Dict, Tuple, Optional
 from .text_speech import text_to_speech, TextToSpeechError
 
 warnings.filterwarnings("ignore", category=UserWarning, module="spacy.pipeline.lemmatizer", lineno=211)
 
-nlp = en_core_web_sm.load(disable=["tagger", "parser", "ner"])
+try:
+    nlp = spacy.load('en_core_web_sm', disable=["tagger", "parser", "ner"])
+except OSError:
+    print("Model 'en_core_web_sm' not found. Downloading...")
+    spacy.cli.download('en_core_web_sm')
+    nlp = spacy.load('en_core_web_sm', disable=["tagger", "parser", "ner"])
 nlp.add_pipe("sentencizer")
 
 CHUNK = 8196
@@ -232,11 +237,11 @@ def stream_audio_response(streaming_text: Iterator[Dict], stop_audio_event: Opti
         if skip:
             if skip.is_set():
                 break
-        if "choices" in resp:
+        if resp.choices:
             if model is None:
-                model = resp['model']
-            if "content" in resp["choices"][0]["delta"]:
-                text = resp["choices"][0]["delta"]["content"]
+                model = resp.model
+            if resp.choices[0].delta.content:
+                text = resp.choices[0].delta.content
                 if text is not None:
                     buffer += text
                     output += text
@@ -266,13 +271,13 @@ def stream_audio_response(streaming_text: Iterator[Dict], stop_audio_event: Opti
 
                         # Keep the last part (which may be an incomplete sentence) in the buffer
                         buffer = merged_sentences[-1]
-            if "tool_calls" in resp["choices"][0]["delta"]:
-                for tool in resp["choices"][0]["delta"]["tool_calls"]:
-                    if "function" in tool:
-                        if "name" in tool["function"]:
-                            tool_calls[tool["index"]] = tool
-                        elif "arguments" in tool["function"]:
-                            tool_calls[tool["index"]]["function"]["arguments"] += tool["function"]["arguments"]
+            if resp.choices[0].delta.tool_calls:
+                for tool in resp.choices[0].delta.tool_calls:
+                    if tool.function:
+                        if tool.function.name:
+                            tool_calls[tool.index] = tool
+                        elif tool.function.arguments:
+                            tool_calls[tool.index].function.arguments += tool.function.arguments
                     else:
                         warnings.warn("Tool call does not contain a function.")
 
@@ -280,7 +285,7 @@ def stream_audio_response(streaming_text: Iterator[Dict], stop_audio_event: Opti
         if skip.is_set():
             return "Sorry.", "null"
     if resp:
-        reason = resp["choices"][0]["finish_reason"]
+        reason = resp.choices[0].finish_reason
     else:
         reason = "null"
     if reason != "stop":

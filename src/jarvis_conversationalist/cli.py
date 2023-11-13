@@ -1,7 +1,6 @@
 import argparse
 import multiprocessing
 import time
-import sys
 
 from .conversationalist import prep_mic, converse
 from .config import load_key, load_config, save_config, set_openai_key, set_user
@@ -89,16 +88,11 @@ def main():
         conversation_process.terminate()
 
 
-def debug():
+def main2():
     prep_mic()
     converse(60)
 
 
 if __name__ == "__main__":
-    try:
-        main()
-    except KeyboardInterrupt:
-        print()
-        print("Interrupted by user!")
-        sys.exit(0)
+    main()
 

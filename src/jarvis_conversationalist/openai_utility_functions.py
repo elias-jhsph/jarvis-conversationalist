@@ -1,7 +1,10 @@
 import json
 import certifi
 import os
-import openai
+from openai import OpenAI, _utils
+
+client = OpenAI()
+_utils._logs.logger.setLevel("CRITICAL")
 
 os.environ["REQUESTS_CA_BUNDLE"] = certifi.where()
 os.environ["SSL_CERT_FILE"] = certifi.where()
@@ -41,19 +44,17 @@ def check_for_directed_at_me(transcript, n=1):
                      " people in the room or people on the phone. It is your job to determine if the user is speaking" \
                      " to " + name + " directly."
 
-    response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
+    response = client.chat.completions.create(model="gpt-3.5-turbo",
         messages=[{"role": "system", "content": system_message},
                   {"role": "user", "content": "\n".join(transcript)}],
         functions=functions,
         n=n,
-        function_call={"name": "configure_response"}
-    )
+        function_call={"name": "configure_response"})
     probabilities = []
-    for result in response['choices']:
-        result = result['message'].get("function_call")
+    for result in response.choices:
+        result = result.message.function_call
         if result:
-            probabilities.append(json.loads(result["arguments"])["probability"]/100)
+            probabilities.append(json.loads(result.arguments)['probability']/100)
     return probabilities
 
 
@@ -96,19 +97,17 @@ def check_for_completion(transcript, n=1):
     system_message = "You are seeing a live transcription of what is being said in a room. It is your job to determine"
     " if the user is done speaking by analyzing the text below and seeing if the user has completed their thought."
 
-    response = openai.ChatCompletion.create(
-        model="gpt-4",
-        messages=[{"role": "system", "content": system_message},
-                  {"role": "user", "content": "\n".join(transcript)}],
-        functions=functions,
-        n=n,
-        function_call={"name": "configure_response"}
-    )
+    response = client.chat.completions.create(model="gpt-4",
+    messages=[{"role": "system", "content": system_message},
+              {"role": "user", "content": "\n".join(transcript)}],
+    functions=functions,
+    n=n,
+    function_call={"name": "configure_response"})
     probabilities = []
-    for result in response['choices']:
-        result = result['message'].get("function_call")
+    for result in response.choices:
+        result = result.message.function_call
         if result:
-            probabilities.append(json.loads(result["arguments"])["probability"]/100)
+            probabilities.append(json.loads(result.arguments)["probability"]/100)
     return probabilities
 
 
@@ -147,24 +146,20 @@ def extract_query(transcript):
     " It is ok if there are multiple parts of the query. Just make sure to exclude the parts of the transcript that "
     " are not the query."
 
-    response = openai.ChatCompletion.create(
-        model="gpt-4",
-        messages=[{"role": "system", "content": system_message},
-                  {"role": "user", "content": "\n".join(transcript)}],
-        functions=functions,
-        function_call={"name": "configure_response"}
-    )
-    result = response['choices'][0]['message'].get("function_call")
+    response = client.chat.completions.create(model="gpt-4",
+    messages=[{"role": "system", "content": system_message},
+              {"role": "user", "content": "\n".join(transcript)}],
+    functions=functions,
+    function_call={"name": "configure_response"})
+    result = response.choices[0].message.function_call
     if result:
-        return json.loads(result["arguments"])["query"]
+        return json.loads(result.arguments)["query"]
     return
 
 
 def simple_stream_response(query, context=None):
     if context is None:
         context = []
-    return openai.ChatCompletion.create(
-        model="gpt-4",
-        messages=context+[{"role": "user", "content": query}],
-        stream=True
-    )
+    return client.chat.completions.create(model="gpt-4",
+    messages=context+[{"role": "user", "content": query}],
+    stream=True)

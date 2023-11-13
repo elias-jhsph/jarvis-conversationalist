@@ -1,6 +1,8 @@
 import requests
 import geocoder
-import openai
+from openai import OpenAI
+
+client = OpenAI()
 
 temperature = 0.6
 basic_model = "gpt-3.5-turbo-16k"
@@ -22,17 +24,15 @@ def summarize(query:str, content: str) -> str:
     :return: The summary.
     :rtype: str
     """
-    response = openai.ChatCompletion.create(
-        model=basic_model,
-        messages=[{'role': 'system', 'content': f'There was a search for the following weather:\n"{query}"\nPlease '
-                                                f'provide a concise summary of the following content while keeping '
-                                                f'mind what will best respond to the query:\n{content}\n'}],
-        max_tokens=400,
-        n=1,
-        stop=None,
-        temperature=temperature,
-    )
-    summary = response['choices'][0]['message']['content']
+    response = client.chat.completions.create(model=basic_model,
+    messages=[{'role': 'system', 'content': f'There was a search for the following weather:\n"{query}"\nPlease '
+                                            f'provide a concise summary of the following content while keeping '
+                                            f'mind what will best respond to the query:\n{content}\n'}],
+    max_tokens=400,
+    n=1,
+    stop=None,
+    temperature=temperature)
+    summary = response.choices[0].message.content
     return summary
 
 
