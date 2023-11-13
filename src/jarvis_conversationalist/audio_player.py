@@ -1,7 +1,6 @@
 import atexit
 import pyaudio
 import os
-import sys
 import time
 import threading
 import wave
@@ -74,7 +73,7 @@ def _play_audio_file_blocking(file_path: str, stop_event: threading.Event, loops
         files_updated = []
         for file in file_path:
             file = str(pkg_resources.files('jarvis_conversationalist').joinpath('audio_files').
-                       joinpath(os.basename(file)))
+                       joinpath(os.path.basename(file)))
             files_updated.append(file)
         file_path = files_updated
         if isinstance(loops, list) and isinstance(destroy, list):
@@ -89,7 +88,7 @@ def _play_audio_file_blocking(file_path: str, stop_event: threading.Event, loops
         return
     else:
         file_path = str(pkg_resources.files('jarvis_conversationalist').
-                        joinpath('audio_files').joinpath(os.basename(file_path)))
+                        joinpath('audio_files').joinpath(os.path.basename(file_path)))
         chunk = 8196
         if audio_stream is not None:
             logger.info("Audio stream already exists, closing it...")
