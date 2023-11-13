@@ -1,0 +1,11 @@
+whisper_models/*
+config.json
+key.key
+__pycache__
+__pycache__/*
+*/__pycache__/
+*/__pycache__/*
+logs/*
+audio_output/*
+venv/*
+.DS_Store

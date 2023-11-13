@@ -1,0 +1,16 @@
+[metadata]
+name = jarvis_conversationalist
+version = 0.1.0
+author = Elias Weston-Farber
+author_email = eweston4@jhu.edu
+description = A voice assitant for the command line
+long_description = file: README.md
+long_description_content_type = text/markdown
+url = https://github.com/elias-jhsph/jarvis-conversationalist
+classifiers =
+    Programming Language :: Python :: 3
+    License :: OSI Approved :: General Public License v3 (GPLv3)
+    Operating System :: OS Independent
+[options]
+python_requires = >=3.6
+packages = find:

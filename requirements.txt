@@ -1,0 +1,15 @@
+openai-whisper
+openai
+chromadb
+soundfile
+numpy
+PyAudio
+certifi
+pydub
+gtts
+spacy
+beautifulsoup4
+googlesearch-python
+tiktoken
+geocoder
+scrapy
