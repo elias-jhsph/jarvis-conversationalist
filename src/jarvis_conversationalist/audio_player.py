@@ -6,6 +6,7 @@ import time
 import threading
 import wave
 import struct
+import importlib.resources as pkg_resources
 from numpy import linspace, int16, sqrt, maximum, mean, square, frombuffer
 
 from .logger_config import get_logger
@@ -70,12 +71,11 @@ def _play_audio_file_blocking(file_path: str, stop_event: threading.Event, loops
     global audio_stream
     stream = None
     if isinstance(file_path, list):
-        if getattr(sys, 'frozen', False):
-            files_updated = []
-            for file in file_path:
-                file = os.path.join(sys._MEIPASS, file)
-                files_updated.append(file)
-            file_path = files_updated
+        files_updated = []
+        for file in file_path:
+            file = pkg_resources.path('jarvis_conversationalist.audio_files', file)
+            files_updated.append(file)
+        file_path = files_updated
         if isinstance(loops, list) and isinstance(destroy, list):
             for i, file in enumerate(file_path):
                 _play_audio_file_blocking(file, stop_event, loops[i], delay, destroy[i], added_stop_event)
@@ -87,8 +87,7 @@ def _play_audio_file_blocking(file_path: str, stop_event: threading.Event, loops
                 _play_audio_file_blocking(file, stop_event, loops, delay, destroy, added_stop_event)
         return
     else:
-        if getattr(sys, 'frozen', False):
-            file_path = os.path.join(sys._MEIPASS, file_path)
+        file_path = pkg_resources.path('jarvis_conversationalist.audio_files', file_path)
         chunk = 8196
         if audio_stream is not None:
             logger.info("Audio stream already exists, closing it...")
