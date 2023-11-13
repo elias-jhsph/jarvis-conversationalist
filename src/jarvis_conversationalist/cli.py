@@ -2,6 +2,7 @@ import argparse
 import multiprocessing
 import time
 
+from .conversationalist import prep_mic, converse
 from .config import load_key, load_config, save_config, set_openai_key, set_user, get_openai_key
 from .logger_config import change_logging_level
 import warnings
@@ -42,8 +43,6 @@ def main():
     if get_openai_key() is None:
         print("Please set your OpenAI API key using the --key argument once to cache your key.")
         return
-
-    from .conversationalist import prep_mic, converse
 
     # Prepare the microphone
     prep_mic()

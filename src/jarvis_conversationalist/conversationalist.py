@@ -15,8 +15,6 @@ from pyaudio import PyAudio, paInt16, get_sample_size
 import whisper
 import warnings
 import signal
-from .config import get_openai_key
-os.environ["OPENAI_API_KEY"] = get_openai_key()
 
 from .openai_utility_functions import check_for_directed_at_me, check_for_completion, extract_query
 from .openai_interface import stream_response, resolve_response, use_tools, schedule_refresh_assistant
