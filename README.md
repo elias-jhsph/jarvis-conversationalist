@@ -50,7 +50,7 @@ jarvis --reset
 Jarvis Conversationalist requires Python 3.11 or later.  
 Go to the Python official website and download the version 3.11 for Mac.
 or just download this... 
-(https://www.python.org/ftp/python/3.11.0/python-3.11.0-macos11.pkg)[https://www.python.org/ftp/python/3.11.0/python-3.11.0-macos11.pkg]
+[https://www.python.org/ftp/python/3.11.0/python-3.11.0-macos11.pkg](https://www.python.org/ftp/python/3.11.0/python-3.11.0-macos11.pkg)
 Open the downloaded file and follow the installation instructions.  
   
 
@@ -99,7 +99,7 @@ Wait for the installation to complete.
 Finding Your OpenAI API Key  
 5\. Create Open an OpenAI Account:  
 Visit OpenAI's website and sign up or log in.<= br>After logging in, navigate to the API section.
-(https://platform.openai.com/api-keys)[https://platform.openai.com/api-keys] 
+[https://platform.openai.com/api-keys](https://platform.openai.com/api-keys)
 
 
 6\. Generate an API Key:  
