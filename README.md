@@ -97,9 +97,8 @@ pip3.11 install jarvis_conversational
 Then press Enter.  
 Wait for the installation to complete.
   
-Finding Your OpenAI API Key  
-5\. Create Open an OpenAI Account:  
-Visit OpenAI's website and sign up or log in.<= br>After logging in, navigate to the API section.
+5\. Finding Your OpenAI API Key - Create Open an OpenAI Account:  
+Visit OpenAI's website and sign up or log in. After logging in, navigate to the API section.
 [https://platform.openai.com/api-keys](https://platform.openai.com/api-keys)
 
 
@@ -116,7 +115,7 @@ To set your OpenAI API username and key, use:
 jarvis --u= ser YOUR\_USERNAME --key YOUR\_KEY 
 ```
 Replace YOUR\_USERNAME and YOUR\_KEY = with your actual OpenAI username and API key.  
-After your first successful use go to terminal](3D"http=)
+After your first successful use go to terminal
 
 ```bash
 jarvis
