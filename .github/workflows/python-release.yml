@@ -45,7 +45,7 @@ jobs:
 
       - name: Create Release
         if: steps.get_version.outputs.version != steps.get_latest_release.outputs.result
-        uses: actions/create-release@v2
+        uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
