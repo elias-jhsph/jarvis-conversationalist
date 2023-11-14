@@ -28,7 +28,7 @@ logger = get_logger()
 
 
 try:
-    core_path = pkg_resources.files('jarvis_conversationalist').joinpath('audio_files')
+    core_path = str(pkg_resources.files('jarvis_conversationalist').joinpath('audio_files'))
 except Exception as e:
     if os.getcwd().find('jarvis-conversationalist') != -1:
         core_path = os.path.join(os.getcwd()[:os.getcwd().find('jarvis-conversationalist')],
