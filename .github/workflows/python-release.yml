@@ -47,9 +47,13 @@ jobs:
         if: steps.get_version.outputs.version != steps.get_latest_release.outputs.result
         uses: actions/create-release@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
         with:
           tag_name: ${{ steps.get_version.outputs.version }}
           release_name: Release ${{ steps.get_version.outputs.version }}
+          body: |
+            New release!
           draft: false
           prerelease: false
+
+        
