@@ -27,13 +27,18 @@ jobs:
       - name: Get new version from pyproject.toml
         id: get_version
         run: |
-          VERSION=$(python -c "import toml; print(toml.load('pyproject.toml')['version'])")
+          VERSION=$(python -c "import toml; print(toml.load('pyproject.toml')['project']['version'])")
           echo "New version is $VERSION"
           echo "::set-output name=version::$VERSION"
 
+      - name: Push Git Tag
+        run: |
+          git tag ${{ steps.get_version.outputs.version }}
+          git push origin ${{ steps.get_version.outputs.version }}
+
       - name: Get latest release
         id: get_latest_release
-        uses: actions/github-script@v3
+        uses: actions/github-script@v2
         with:
           github-token: ${{secrets.GITHUB_TOKEN}}
           script: |
@@ -47,9 +52,13 @@ jobs:
         if: steps.get_version.outputs.version != steps.get_latest_release.outputs.result
         uses: actions/create-release@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}        
         with:
           tag_name: ${{ steps.get_version.outputs.version }}
           release_name: Release ${{ steps.get_version.outputs.version }}
+          body: |
+            New release!
           draft: false
           prerelease: false
+
+        
