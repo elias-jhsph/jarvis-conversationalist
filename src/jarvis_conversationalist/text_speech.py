@@ -202,7 +202,8 @@ def text_to_speech(text: str, model="gpt-4", stream=False):
         fixed_text = "[[rate 175]] " + first_word + "[[rate 200]] " + rest_of_text
         text_cmd = f'[[pbas {pitch}]] [[slnc 300]]{fixed_text}[[slnc 200]]'
         output_file = os.path.join(audio_folder, str(uuid.uuid4()) + ".wav")
-        result = subprocess.run(['say']+vflag+[text_cmd, "-o", output_file, '--data-format=LEI16@22050'])
+        result = subprocess.run(['say']+vflag+[text_cmd, "-o", output_file, '--data-format=LEI16@22050'],
+                                capture_output=True)
         if not stream:
             return output_file
         if result.returncode != 0:
