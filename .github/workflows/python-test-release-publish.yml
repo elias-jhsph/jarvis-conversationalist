@@ -24,6 +24,8 @@ jobs:
           pip install toml
           pip install .
       - name: Test package
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: python -m unittest
       - name: Build package
         run: python -m build
