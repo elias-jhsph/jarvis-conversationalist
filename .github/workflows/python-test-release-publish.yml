@@ -4,27 +4,32 @@ on:
   push:
     branches:
       - main
-    paths:
-      - 'pyproject.toml'
 
 jobs:
   release:
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     outputs:
       tag_name: ${{ steps.get_version.outputs.version }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-
+      - uses: actions/checkout@v3
       - name: Set up Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v3
         with:
           python-version: '3.11'
-
       - name: Install dependencies
         run: |
+          brew install portaudio
           python -m pip install --upgrade pip
+          pip install build
           pip install toml
+          pip install .
+      - name: Test package
+        run: python -m unittest
+      - name: Build package
+        run: python -m build
+   
+      - name: Checkout code
+        uses: actions/checkout@v2
 
       - name: Get new version from pyproject.toml
         id: get_version
@@ -58,5 +63,11 @@ jobs:
             New release!
           draft: false
           prerelease: false
+          
+      - name: Publish package
+        uses: pypa/gh-action-pypi-publish@27b31702a0e7fc50959f5ad993c78deac1bdfc29
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_API_TOKEN }}
 
         
