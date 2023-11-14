@@ -207,7 +207,7 @@ def text_to_speech(text: str, model="gpt-4", stream=False):
         if not stream:
             return output_file
         if result.returncode != 0:
-            raise TextToSpeechError(result.stderr.decode("utf-8"))
+            raise Exception("Say command error: " + result.stderr.decode("utf-8"))
         with open(output_file, 'rb') as file:
             file.seek(0)
             byte_data = file.read()
