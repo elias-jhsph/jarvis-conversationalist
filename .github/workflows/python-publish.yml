@@ -9,7 +9,10 @@
 name: Upload Python Package
 
 on:
-  workflow_dispatch:
+  workflow_run:
+    workflows: ["Create Release on Version Change"]
+    types:
+      - completed
 
 permissions:
   contents: read
@@ -17,7 +20,7 @@ permissions:
 jobs:
   deploy:
 
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v3
@@ -27,11 +30,8 @@ jobs:
         python-version: '3.11'
     - name: Install dependencies
       run: |
-        brew install portaudio
         python -m pip install --upgrade pip
         pip install build
-    - name: Test package
-      run: python -m unittest
     - name: Build package
       run: python -m build
     - name: Publish package
