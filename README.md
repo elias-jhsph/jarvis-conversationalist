@@ -91,7 +91,7 @@ Then press Enter.
 In Terminal, type:
 
 ```bash
-pip3.11 install jarvis_conversational
+pip3.11 install jarvis\_conversational
 ```
 
 Then press Enter.  
@@ -123,6 +123,12 @@ jarvis
 
 Then press Enter, to use Jarvis!  
 
+8\. Updating Jarvis Conversationalist:
+
+To update Jarvis Conversationalist, use:  
+```bash
+pip3.11 install --upgrade jarvis\_conversationalist 
+```
 
 ## Contributing
 
