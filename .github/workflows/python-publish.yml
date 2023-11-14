@@ -13,7 +13,6 @@ on:
     workflows: ["Create Release on Version Change"]
     types:
       - completed
-    conclusions: [success]
 
 permissions:
   contents: read
@@ -22,7 +21,7 @@ jobs:
   deploy:
 
     runs-on: ubuntu-latest
-
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
     - uses: actions/checkout@v3
     - name: Set up Python
