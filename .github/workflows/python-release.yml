@@ -27,7 +27,7 @@ jobs:
       - name: Get new version from pyproject.toml
         id: get_version
         run: |
-          VERSION=$(python -c "import toml; print(toml.load('pyproject.toml')['tool']['poetry']['version'])")
+          VERSION=$(python -c "import toml; print(toml.load('pyproject.toml')['version'])")
           echo "New version is $VERSION"
           echo "::set-output name=version::$VERSION"
 
