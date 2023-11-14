@@ -91,7 +91,7 @@ Then press Enter.
 In Terminal, type:
 
 ```bash
-pip3.11 install jarvis\_conversational
+pip3.11 install jarvis_conversational
 ```
 
 Then press Enter.  
@@ -112,9 +112,9 @@ Using Jarvis Conversationalist
   
 To set your OpenAI API username and key, use:  
 ```bash
-jarvis --u= ser YOUR\_USERNAME --key YOUR\_KEY 
+jarvis --u= ser YOUR_USERNAME --key YOUR_KEY 
 ```
-Replace YOUR\_USERNAME and YOUR\_KEY = with your actual OpenAI username and API key.  
+Replace YOUR_USERNAME and YOUR_KEY = with your actual OpenAI username and API key.  
 After your first successful use go to terminal
 
 ```bash
@@ -127,7 +127,7 @@ Then press Enter, to use Jarvis!
 
 To update Jarvis Conversationalist, use:  
 ```bash
-pip3.11 install --upgrade jarvis\_conversationalist 
+pip3.11 install --upgrade jarvis_conversationalist 
 ```
 
 ## Contributing
