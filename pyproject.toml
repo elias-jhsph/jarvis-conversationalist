@@ -2,7 +2,7 @@
 name = "jarvis_conversationalist"
 version = "0.2.1"
 authors = [{name="Elias Weston-Farber", email="eweston4@jhu.edu"}]
-description = "A voice assitant for the command line"
+description = "A voice assistant for the command line"
 readme = "README.md"
 classifiers = [
     "Programming Language :: Python :: 3",
