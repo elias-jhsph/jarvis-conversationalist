@@ -14,11 +14,11 @@ if not os.path.exists(audio_folder):
 if sys.platform == 'darwin':
     out = subprocess.run(['say', '-v', '?'], capture_output=True)
     vflag = []
-    if out.stdout.decode("utf-8").find("Samantha") >= 0:
+    if out.stdout.decode("utf-8").find("Samantha (Enhanced)") >= 0:
         vflag = ['-v', 'Samantha (Enhanced)']
-    if out.stdout.decode("utf-8").find("Tom") >= 0:
+    if out.stdout.decode("utf-8").find("Tom (Enhanced)") >= 0:
         vflag = ['-v', 'Tom (Enhanced)']
-    if out.stdout.decode("utf-8").find("Tom") >= 0:
+    if out.stdout.decode("utf-8").find("Evan (Enhanced)") >= 0:
         vflag = ['-v', 'Evan (Enhanced)']
 
 
