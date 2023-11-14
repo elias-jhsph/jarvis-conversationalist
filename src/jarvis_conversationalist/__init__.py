@@ -17,6 +17,6 @@ if get_openai_key() is None:
 else:
     os.environ["OPENAI_API_KEY"] = get_openai_key()
 
-from .conversationalist import prep_mic, process_assistant_response, converse
+from .conversationalist import prep_mic, process_assistant_response, converse, get_core_path
 __version__ = '0.1.9'
 # Path: src/jarvis_conversationalist/conversationalist.py

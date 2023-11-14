@@ -15,6 +15,7 @@ from pyaudio import PyAudio, paInt16, get_sample_size
 import whisper
 import warnings
 import signal
+import importlib.resources as pkg_resources
 
 from .openai_utility_functions import check_for_directed_at_me, check_for_completion, extract_query
 from .openai_interface import stream_response, resolve_response, use_tools, schedule_refresh_assistant
@@ -24,6 +25,16 @@ from .audio_player import play_audio_file
 
 from .logger_config import get_logger
 logger = get_logger()
+
+
+try:
+    core_path = pkg_resources.files('jarvis_conversationalist').joinpath('audio_files')
+except Exception as e:
+    if os.getcwd().find('jarvis-conversationalist') != -1:
+        core_path = os.path.join(os.getcwd()[:os.getcwd().find('jarvis-conversationalist')],
+                                 'jarvis-conversationalist', 'src', 'jarvis_conversationalist', 'audio_files')
+    else:
+        raise Exception(f"Failed to find the audio files directory: {e}")
 
 warnings.filterwarnings("ignore", message="FP16 is not supported on CPU; using FP32 instead")
 
@@ -41,6 +52,15 @@ dynamic_energy_adjustment_damping = 0.15
 dynamic_energy_ratio = 1.5
 
 wake_word = "jarvis"
+
+
+def get_core_path():
+    """
+    Get the path to the core audio files.
+    :return: The path to the core audio files.
+    :rtype: str
+    """
+    return core_path
 
 
 def prep_mic(duration: float = 2.0) -> None:
@@ -226,15 +246,14 @@ def process_assistant_response(query, beeps_stop_event, interrupt_event):
     :rtype: list
     """
     new_history = [{"content": query, "role": "user"}]
-    content, reason, tool_calls = stream_audio_response(
-        stream_response(new_history), stop_audio_event=beeps_stop_event, skip=interrupt_event)
+    content, reason, tool_calls = stream_audio_response(stream_response(new_history), stop_audio_event=beeps_stop_event, skip=interrupt_event)
     if not interrupt_event.is_set():
         if tool_calls is None:
             new_history.append({"content": content, "role": "assistant"})
             logger.info("Response Content:"+" "+str( content))
         else:
             while tool_calls is not None and not interrupt_event.is_set():
-                tool_stop_event = play_audio_file("audio_files/searching.wav", loops=7, blocking=False)
+                tool_stop_event = play_audio_file(core_path+"/searching.wav", loops=7, blocking=False)
                 new_history += use_tools(tool_calls, content)
                 tool_stop_event.set()
                 content, reason, tool_calls = stream_audio_response(
@@ -285,7 +304,7 @@ def converse(memory, interrupt_event=None, ready_event=None):
     timestamps = []
 
     schedule_refresh_assistant()
-    play_audio_file("audio_files/tone_one.wav", blocking=False)
+    play_audio_file(core_path+"/tone_one.wav", blocking=False)
     tone = time.time()
     while audio_queue.empty() and time.time() - tone < 10:
         pass
@@ -355,7 +374,7 @@ def converse(memory, interrupt_event=None, ready_event=None):
                                 if completed:
                                     additions = max_additions
                 speaking.set()
-                beeps_stop_event = play_audio_file("audio_files/beeps.wav", loops=7, blocking=False)
+                beeps_stop_event = play_audio_file(core_path+"/beeps.wav", loops=7, blocking=False)
                 extracted_query = extract_query(transcript)
                 logger.info("Query extracted: " + extracted_query)
                 if not interrupt_event.is_set():
@@ -378,7 +397,5 @@ def converse(memory, interrupt_event=None, ready_event=None):
                 while not text_queue.empty():
                     text_queue.get()
                 last_response_time = time.time()
-                play_audio_file("audio_files/tone_one.wav", blocking=False, delay=2)
-
-
+                play_audio_file(core_path+"/tone_one.wav", blocking=False, delay=2)
 

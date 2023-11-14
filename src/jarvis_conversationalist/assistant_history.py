@@ -42,7 +42,6 @@ def _strip_entry(entry: dict):
             return {"role": entry["role"], "content": entry["content"], "name": entry["name"]}
         return {"role": entry["role"], "content": entry["content"]}
 
-
 class AssistantHistory:
     """
     A class to manage the Assistant's conversation history, including storing, reducing,
@@ -243,9 +242,15 @@ class AssistantHistory:
         for el in ls:
             if isinstance(el, list):
                 for e in el:
-                    total += self.count_tokens_text(e['content'])
+                    for k in e.keys():
+                        test = e[k]
+                        if isinstance(test, str):
+                            total += self.count_tokens_text(test)
             else:
-                total += self.count_tokens_text(el['content'])
+                for k in el.keys():
+                    test = el[k]
+                    if isinstance(test, str):
+                        total += self.count_tokens_text(test)
         return total
 
     def add_context(self, context: list) -> None:
@@ -391,11 +396,15 @@ class AssistantHistory:
                 "history_query": {"ids": [], "num_tokens": 0},
                 "summaries_queries": {"ids": [], "num_tokens": 0},
                 "summaries": {"ids": [], "num_tokens": 0}}
+        system_message = [self.get_system()]
         if isinstance(query, list):
+            query_tokens = self.count_tokens_context(query+system_message)
             query_str = ""
             for el in query:
                 query_str = query_str + "\n\n" + el["content"]
             query = query_str
+        else:
+            query_tokens = self.count_tokens_text(query)+self.count_tokens_context(system_message)
 
         if max_tokens is None:
             max_tokens = int(0.85 * self.max_tokens)
@@ -403,7 +412,7 @@ class AssistantHistory:
             context_list = []
             id_added = []
             summary_ids = []
-            token_count = self.count_tokens_text(query)
+            token_count = query_tokens
 
             # Add the most recent history entries
             recent_history_length = 0
@@ -485,12 +494,12 @@ class AssistantHistory:
                 context_list = []
                 summary_ids = []
                 id_added = []
-                token_count = self.count_tokens_text(query)
+                token_count = query_tokens
         else:
             context_list = []
             summary_ids = []
             id_added = []
-            token_count = self.count_tokens_text(query)
+            token_count = query_tokens
 
         # Add the summaries if there is any space left
         current_summary_id = self.next_summary_id - 1
@@ -515,7 +524,7 @@ class AssistantHistory:
         if only_necessary_fields:
             context_list = [_strip_entry(entry) for entry in context_list]
 
-        self.last_context = [self.get_system()] + context_list
+        self.last_context = system_message + context_list
 
         if verbose:
             from pprint import pprint
@@ -661,3 +670,23 @@ class AssistantHistory:
         if len(output) > 1:
             warnings.warn("Chat assistant: More than one summary found for id {}".format(id))
         return output
+
+    def truncate_input_context(self, context):
+        """
+        Truncate the input context to the maximum number of tokens.
+
+        :param context: The context to truncate.
+        :type context: list
+        :return: The truncated context.
+        :rtype: list
+        """
+        total_tokens = 0
+        truncated_context = [context[0]]
+        context.reverse()
+        for entry in context:
+            num_tokens = self.count_tokens_context([entry])
+            if total_tokens + num_tokens > self.max_tokens:
+                break
+            truncated_context.insert(1, entry)
+            total_tokens += num_tokens
+        return truncated_context

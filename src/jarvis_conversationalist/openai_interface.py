@@ -255,6 +255,7 @@ def stream_response(query, query_role="user", keep_last_history=False):
         query = [{"role": query_role, "content": query}]
     if keep_last_history:
         context = history_access.last_context + query
+        context = history_access.truncate_input_context(context)
     else:
         context = history_access.gather_context(query) + query
     logger.info(f"Context: {context}")
@@ -263,26 +264,26 @@ def stream_response(query, query_role="user", keep_last_history=False):
     log_model(model["name"])
     try:
         return client.chat.completions.create(model=model["name"],
-        messages=context,
-        temperature=model["temperature"],
-        max_tokens=model["max_message"],
-        top_p=model["top_p"],
-        frequency_penalty=model["frequency_penalty"],
-        presence_penalty=model["presence_penalty"],
-        stream=True,
-        tools=tools_list)
+                                              messages=context,
+                                              temperature=model["temperature"],
+                                              max_tokens=model["max_message"],
+                                              top_p=model["top_p"],
+                                              frequency_penalty=model["frequency_penalty"],
+                                              presence_penalty=model["presence_penalty"],
+                                              stream=True,
+                                              tools=tools_list)
     except openai.RateLimitError:
         model = get_model(error=True)
         log_model(model["name"])
         return client.chat.completions.create(model=model["name"],
-        messages=context,
-        temperature=model["temperature"],
-        max_tokens=model["max_message"],
-        top_p=model["top_p"],
-        frequency_penalty=model["frequency_penalty"],
-        presence_penalty=model["presence_penalty"],
-        stream=True,
-        tools=tools_list)
+                                              messages=context,
+                                              temperature=model["temperature"],
+                                              max_tokens=model["max_message"],
+                                              top_p=model["top_p"],
+                                              frequency_penalty=model["frequency_penalty"],
+                                              presence_penalty=model["presence_penalty"],
+                                              stream=True,
+                                              tools=tools_list)
 
 
 def use_tools(tool_calls, content):
