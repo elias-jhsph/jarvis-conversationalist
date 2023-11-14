@@ -33,7 +33,7 @@ jobs:
 
       - name: Get latest release
         id: get_latest_release
-        uses: actions/github-script@v3
+        uses: actions/github-script@v2
         with:
           github-token: ${{secrets.GITHUB_TOKEN}}
           script: |
