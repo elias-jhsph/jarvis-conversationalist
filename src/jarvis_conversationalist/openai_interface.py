@@ -317,39 +317,37 @@ def use_tool(tool_call):
     :rtype: tuple
     """
     logger.info(f"Tool Call: {tool_call}")
-    if tool_call.type != "function":
-        raise ValueError("Tool type must be 'function'")
-    function_call = tool_call.function
+    function_name = tool_call['name']
     results = []
     errors = []
     missing_function = False
     try:
-        called_function = function_info[function_call.name]['function']
+        called_function = function_info[function_name]['function']
     except KeyError:
         missing_function = True
-        logger.error("KeyError:"+" "+str( function_call))
+        logger.error("KeyError:"+" "+str( function_name))
         errors.append({"content": "ERROR", "role": "function",
-                            "name": function_call.name})
+                            "name": function_name})
         errors.append({"content": "Only use a valid function in your "
                                        "function list.", "role": "system"})
     if not missing_function:
         try:
-            arguments = json.loads(function_call.arguments)
+            arguments = json.loads(tool_call['arguments'])
             try:
                 result = called_function(**arguments)
                 results.append({"content": str(result), "role": "function",
-                                    "name": function_call.name})
+                                    "name": function_name})
             except Exception as e:
                 errors.append({"content": "ERROR", "role": "function",
-                                    "name": function_call.name})
+                                    "name": function_name})
                 errors.append({"content": "Error calling "
-                                               "" + function_call.name +
+                                               "" + function_name +
                                                " function with passed arguments " +
                                                "" + str(arguments) + " : " + str(e),
                                     "role": "system"})
         except json.decoder.JSONDecodeError:
-            required_arguments = function_info[function_call.name]['schema']['function']['parameters']['required']
-            if function_call['arguments'] == "":
+            required_arguments = function_info[function_name]['schema']['function']['parameters']['required']
+            if tool_call['arguments'] == "":
                 new_history_item = {"content": "You're function call did not "
                                                "include any arguments. Please try again with the "
                                                "correct arguments: " + str(required_arguments),
@@ -357,7 +355,7 @@ def use_tool(tool_call):
             else:
                 new_history_item = {"content": "You're function call did not parse as valid JSON. "
                                                "Please try again", "role": "system"}
-            errors.append({"content": "ERROR", "role": "function", "name": function_call.name})
+            errors.append({"content": "ERROR", "role": "function", "name": function_name})
             errors.append(new_history_item)
     return results, errors
 

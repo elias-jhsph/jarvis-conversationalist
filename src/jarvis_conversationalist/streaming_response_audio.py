@@ -6,6 +6,7 @@ import wave
 import io
 import warnings
 import spacy
+import atexit
 from queue import Queue
 from numpy import frombuffer, int16
 from pyaudio import PyAudio, paInt16
@@ -65,8 +66,10 @@ class SpeechStreamer:
         self.thread = threading.Thread(target=self._play_audio, args=(stop_other_audio, skip))
         self.thread.daemon = True
         self.thread.start()
+        atexit.register(self.stop)
         self.stream = None
         self.py_audio = PyAudio()
+        atexit.register(self.py_audio.terminate)
         self.stop_event = threading.Event()
         self.skip = skip
         self.audio_count = 0
@@ -275,9 +278,12 @@ def stream_audio_response(streaming_text: Iterator[Dict], stop_audio_event: Opti
                 for tool in resp.choices[0].delta.tool_calls:
                     if tool.function:
                         if tool.function.name:
-                            tool_calls[tool.index] = tool
+                            tool_calls[tool.index] = {"name": tool.function.name}
                         elif tool.function.arguments:
-                            tool_calls[tool.index].function.arguments += tool.function.arguments
+                            if "arguments" in tool_calls[tool.index]:
+                                tool_calls[tool.index]["arguments"] += tool.function.arguments
+                            else:
+                                tool_calls[tool.index]["arguments"] = tool.function.arguments
                     else:
                         warnings.warn("Tool call does not contain a function.")
 

@@ -103,7 +103,7 @@ def quick_google_answer_documentation():
 
 
 def get_top_google_results(query=None):
-    return json.dumps(search(query))
+    return json.dumps(search(query, num_results=10, advanced=True)['items'])
 
 
 def get_top_google_results_documentation():
@@ -159,7 +159,6 @@ def write_to_a_file_documentation():
                     '"{\\"hello\\": \\"world\\"}"}}\n {"function_name": "write_to_a_file", "parameters": {"name": ' \
                     '"test.md", "text": "# This is a test"}}\n'
     return schema, examples
-
 
 
 def open_url_for_user(url=None):

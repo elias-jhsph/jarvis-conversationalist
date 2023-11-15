@@ -15,11 +15,12 @@ from pyaudio import PyAudio, paInt16, get_sample_size
 import whisper
 import warnings
 import signal
+import atexit
 import importlib.resources as pkg_resources
 
 from .openai_utility_functions import check_for_directed_at_me, check_for_completion, extract_query
 from .openai_interface import stream_response, resolve_response, use_tools, schedule_refresh_assistant
-from .streaming_response_audio import stream_audio_response
+from .streaming_response_audio import stream_audio_response, set_rt_text_queue
 from .audio_player import play_audio_file
 
 
@@ -246,7 +247,11 @@ def process_assistant_response(query, beeps_stop_event, interrupt_event):
     :rtype: list
     """
     new_history = [{"content": query, "role": "user"}]
-    content, reason, tool_calls = stream_audio_response(stream_response(new_history), stop_audio_event=beeps_stop_event, skip=interrupt_event)
+    current_stream = multiprocessing.Queue()
+    set_rt_text_queue(current_stream)
+    content, reason, tool_calls = stream_audio_response(stream_response(new_history),
+                                                        stop_audio_event=beeps_stop_event,
+                                                        skip=interrupt_event)
     if not interrupt_event.is_set():
         if tool_calls is None:
             new_history.append({"content": content, "role": "assistant"})
@@ -257,11 +262,17 @@ def process_assistant_response(query, beeps_stop_event, interrupt_event):
                 new_history += use_tools(tool_calls, content)
                 tool_stop_event.set()
                 content, reason, tool_calls = stream_audio_response(
-                    stream_response(new_history, keep_last_history=True), stop_audio_event=beeps_stop_event)
+                    stream_response(new_history, keep_last_history=True),
+                    stop_audio_event=beeps_stop_event,
+                    skip=interrupt_event)
             if tool_calls is None:
                 new_history.append({"content": content, "role": "assistant"})
     if interrupt_event.is_set():
         logger.info("Interrupted")
+        partial = ""
+        while not current_stream.empty():
+            partial += current_stream.get()["content"] + "\n"
+        new_history.append({"content": partial, "role": "assistant"})
         new_history.append({"content": "Interupted by user.", "role": "system"})
     return new_history
 
@@ -295,6 +306,9 @@ def converse(memory, interrupt_event=None, ready_event=None):
                                               args=(audio_queue, speaking, current_recording_tag))
     processing_process = multiprocessing.Process(target=audio_processing_process,
                                                  args=(audio_queue, text_queue, speaking, current_transcribing_tag))
+    atexit.register(capture_process.terminate)
+    atexit.register(processing_process.terminate)
+
 
     capture_process.start()
     processing_process.start()
@@ -378,7 +392,14 @@ def converse(memory, interrupt_event=None, ready_event=None):
                 extracted_query = extract_query(transcript)
                 logger.info("Query extracted: " + extracted_query)
                 if not interrupt_event.is_set():
-                    new_history = process_assistant_response(extracted_query, beeps_stop_event, interrupt_event)
+                    try:
+                        new_history = process_assistant_response(extracted_query, beeps_stop_event, interrupt_event)
+                    except Exception as e:
+                        logger.error(e)
+                        play_audio_file(core_path + "/major_error.wav", blocking=False)
+                        new_history = [{"content": extract_query, "role": "user"},
+                                       {"content": "I'm sorry, I'm having so issues with my circuits.",
+                                        "role": "assistant"}]
                 logger.info("Resolving...")
                 resolve_response(new_history)
                 logger.info("Resolved")

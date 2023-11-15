@@ -16,7 +16,7 @@ enc = encoding_for_model(advanced_model)
 temperature = 0.6
 
 
-def search(search_term: str, num_results: int = 10) -> dict:
+def search(search_term: str, num_results: int = 10, advanced: bool = False) -> dict:
     """
     Searches for a term using either Google Custom Search API or a free alternative.
 
@@ -24,12 +24,17 @@ def search(search_term: str, num_results: int = 10) -> dict:
     :type search_term: str
     :param num_results: The number of results to return, defaults to 10.
     :type num_results: int, optional
+    :param advanced: Whether to use advanced info, defaults to False.
+    :type advanced: bool, optional
     :return: A dictionary containing the search results.
     :rtype: dict
     """
     search_results = []
-    for url in google_search(search_term, num_results=num_results):
-        search_results.append({"link": url})
+    for url in google_search(search_term, num_results=num_results, advanced=advanced):
+        if advanced:
+            search_results.append({"link": url.url, "title": url.title, "description": url.description})
+        else:
+            search_results.append({"link": url})
     return {"items": search_results}
 
 

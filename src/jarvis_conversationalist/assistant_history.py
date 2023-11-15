@@ -23,6 +23,20 @@ def get_time() -> tuple:
     )
 
 
+def convert_utc_to_local(utc_time: str) -> str:
+    """
+    Convert a UTC time string to a local time string.
+
+    :param utc_time: A string containing a UTC time.
+    :type utc_time: str
+    :return: A string containing the local time.
+    :rtype: str
+    """
+    utc_time = datetime.datetime.strptime(utc_time, "%Y-%m-%d %H:%M:%S.%f")
+    local_time = utc_time.replace(tzinfo=datetime.timezone.utc).astimezone(tz=None)
+    return local_time.strftime("%A, %B %-d, %Y at %-I:%M %p")
+
+
 def _strip_entry(entry: dict):
     """
     Remove all fields from the entry dictionary except 'role' and 'content'.
@@ -274,8 +288,6 @@ class AssistantHistory:
             if context[i]['role'] == 'assistant' and context[i].get('model', None) is not None:
                 context[i]['model'] = context[i]['model']
             context[i]['num_tokens'] = self.count_tokens_text(context[i]['content'])
-            if self.time_injection:
-                context[i]['content'] = time_str + context[i]['content']
             if self.model_injection and context[i].get('model', None) is not None:
                 context[i]['content'] = "Source AI Model: " + context[i]['model'] + " - " + context[i]['content']
             documents.append(context[i]['content'])
@@ -635,7 +647,15 @@ class AssistantHistory:
                 entry["content"] = results["documents"][pos]
                 entry["id"] = tid
                 output.append(entry)
-        return output
+        time_stamp = []
+        if self.time_injection:
+            if len(output) > 0:
+                stamp = 'Conversation below on ' + convert_utc_to_local(output[0]['utc_time']) + ': '
+                time_stamp = output[0].copy()
+                time_stamp['content'] = stamp
+                time_stamp['role'] = 'system'
+                time_stamp = [time_stamp]
+        return time_stamp + output
 
     def get_summary_from_id_and_earlier(self, id=None, n_results=10, reload_disk=False):
         """
