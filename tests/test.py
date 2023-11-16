@@ -31,5 +31,5 @@ class TestJarvisConversationalist(unittest.TestCase):
         self.assertIsNotNone(context)
 
 
-# if __name__ == "__main__":
-#     unittest.main()
+if __name__ == "__main__":
+    unittest.main()

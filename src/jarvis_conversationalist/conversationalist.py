@@ -64,7 +64,7 @@ def get_core_path():
     return core_path
 
 
-def prep_mic(duration: float = 2.0) -> None:
+def prep_mic(duration: float = 1.0) -> None:
     """
     Prepare the microphone for listening by adjusting it for ambient noise.
 

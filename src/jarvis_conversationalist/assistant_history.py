@@ -3,8 +3,8 @@ import datetime
 import json
 import os
 import re
-import sys
 import warnings
+import uuid
 from typing import List
 import chromadb
 from chromadb.config import Settings
@@ -37,7 +37,7 @@ def convert_utc_to_local(utc_time: str) -> str:
     return local_time.strftime("%A, %B %-d, %Y at %-I:%M %p")
 
 
-def _strip_entry(entry: dict):
+def _strip_entry(entry: dict or list):
     """
     Remove all fields from the entry dictionary except 'role' and 'content'.
 
@@ -55,6 +55,7 @@ def _strip_entry(entry: dict):
         if "name" in entry:
             return {"role": entry["role"], "content": entry["content"], "name": entry["name"]}
         return {"role": entry["role"], "content": entry["content"]}
+
 
 class AssistantHistory:
     """
@@ -100,20 +101,10 @@ class AssistantHistory:
         self.model_injection = model_injection
         self.time_injection = time_injection
         self.persist_directory = persist_directory
-        if getattr(sys, 'frozen', False):
-            self.persist_directory = os.path.join(sys._MEIPASS, self.persist_directory)
         self.client = chromadb.PersistentClient(path=self.persist_directory,
                                                 settings=Settings(anonymized_telemetry=False))
-        # Load metadata from disk, or create a new metadata file if it doesn't exist.
-        if os.path.exists(os.path.join(self.persist_directory, "AssistantHistoryMetadata.json")):
-            with open(os.path.join(self.persist_directory, "AssistantHistoryMetadata.json"), "r") as f:
-                metadata = json.load(f)
-        else:
-            metadata = {"current_id": "0", "current_summary_id": "0", "to_summarize": []}
-        self.next_id = int(metadata["current_id"]) + 1
-        self.next_summary_id = int(metadata["current_summary_id"]) + 1
-        self.to_summarize = metadata["to_summarize"]
-
+        self.remove_broken_id_updates()
+        self.to_summarize = []
         # Load long-term memory from disk, or create a new LTM file if it doesn't exist.
         if os.path.exists(os.path.join(self.persist_directory, "AssistantHistoryLTM.json")):
             with open(os.path.join(self.persist_directory, "AssistantHistoryLTM.json"), "r") as f:
@@ -144,8 +135,35 @@ class AssistantHistory:
             self.history = self.client.get_or_create_collection(name="history")
             self.summaries = self.client.get_or_create_collection(name="summaries")
 
-        if self.next_id > 1:
+        if int(self.get_current_id()) == 0 and len(self.history.peek()['ids']) > 0:
+            warnings.warn("Chat assistant: history database needs metadate update. Updating...")
+            updating = True
+            seed = "updates"
+            i = 1
+            while updating:
+                if not self.get_history_from_id_and_earlier(int(self.get_current_id()) + i, n_results=1):
+                    updating = False
+                else:
+                    ignore = self.create_id(seed)
+                    i += 1
+            self.resolve_id(seed)
+
+        if int(self.get_current_id(summary=True)) == 0 and len(self.summaries.peek()['ids']) > 0:
+            warnings.warn("Chat assistant: summary database needs metadate update. Updating...")
+            updating = True
+            seed = "updates"
+            i = 1
+            while updating:
+                if not self.get_summary_from_id_and_earlier(int(self.get_current_id(summary=True))+i, n_results=1):
+                    updating = False
+                else:
+                    ignore = self.create_id(seed, summary=True)
+                    i += 1
+            self.resolve_id(seed, summary=True)
+
+        if int(self.get_current_id()) > 1:
             # Check whether the next summary ID is in the history database.
+            not_summarized = []
             last_batch = self.get_history_from_last_batch()
             last_batch_id = last_batch[0]["batch_id"]
             last_summary = self.get_summary_from_id_and_earlier(n_results=1)
@@ -161,62 +179,68 @@ class AssistantHistory:
             if refresh:
                 self.to_summarize += not_summarized
                 self.reduce_context()
-        self.save_metadata()
 
-    def reload_from_disk(self):
+    def remove_broken_id_updates(self):
         """
-        Reload the Assistant's conversation history from disk.
+        Remove any broken ID updates.
+        """
+        # list files in persist_directory
+        files = os.listdir(self.persist_directory)
+        for fn in files:
+            if fn.endswith(".tmp"):
+                os.remove(os.path.join(self.persist_directory, fn))
+                warnings.warn("Chat assistant: was interrupted during an update. Removing broken update file.")
 
-        :return: None
-                """
-        self.client = chromadb.PersistentClient(path=self.persist_directory,
-                                                settings=Settings(anonymized_telemetry=False))
-        if os.path.exists(os.path.join(self.persist_directory, "AssistantHistoryMetadata.json")):
-            with open(os.path.join(self.persist_directory, "AssistantHistoryMetadata.json"), "r") as f:
-                metadata = json.load(f)
-        else:
-            metadata = {"current_id": "0", "current_summary_id": "0", "to_summarize": None}
-        self.next_id = int(metadata["current_id"]) + 1
-        self.next_summary_id = int(metadata["current_summary_id"]) + 1
-        self.to_summarize = metadata["to_summarize"]
-
-        if os.path.exists(os.path.join(self.persist_directory, "AssistantHistoryLTM.json")):
-            with open(os.path.join(self.persist_directory, "AssistantHistoryLTM.json"), "r") as f:
-                ltm = json.load(f)
-        else:
-            ltm = {"long_term_memory": ""}
-        self.long_term_memory = ltm["long_term_memory"]
-
-        if self.embedder:
-            self.history = self.client.get_or_create_collection(name="history", embedding_function=self.embedder)
-            self.summaries = self.client.get_or_create_collection(name="summaries", embedding_function=self.embedder)
-        else:
-            self.history = self.client.get_or_create_collection(name="history")
-            self.summaries = self.client.get_or_create_collection(name="summaries")
-
-    def create_chat_id(self):
+    def get_current_id(self, summary=False):
         """
         Get the current set ID.
 
         :return: The current set ID.
         :rtype: str
         """
-        new_id = self.next_id
-        self.next_id = new_id + 1
-        self.save_metadata()
-        return str(new_id)
+        mode = "summary" if summary else "chat"
+        path = os.path.join(self.persist_directory, ".current_id_"+mode+ ".maxdb")
+        if os.path.exists(path):
+            with open(path, "r") as f:
+                return str(f.read())
+        else:
+            with open(path, "w") as f:
+                f.write("0")
+            return '0'
 
-    def create_summary_id(self):
+    def create_id(self, seed, summary=False):
         """
-        Get the current summary ID.
+        Get the current set ID.
 
-        :return: The current summary ID.
+        :return: The current set ID.
         :rtype: str
         """
-        new_id = self.next_summary_id
-        self.next_summary_id = new_id + 1
-        self.save_metadata()
-        return str(new_id)
+        seed = os.path.basename(seed)
+        assert len(seed) > 4
+        mode = "summary" if summary else "chat"
+        path = os.path.join(self.persist_directory, ".in_process_id_"+mode + "_" + seed + ".maxdb")
+        if os.path.exists(path):
+            with open(path, "r") as f:
+                current = int(f.read())
+        else:
+            test = os.listdir(os.path.join(self.persist_directory))
+            test = [x for x in test if os.path.basename(x).startswith(".in_process_id_"+mode)]
+            if len(test) > 0:
+                for fn in test:
+                    os.remove(fn)
+                raise Exception("Chat assistant: multiple in process id files found.")
+            current = self.get_current_id(summary=summary)
+        next_id = str(int(current)+1)
+        with open(path+".tmp", "w") as f:
+            f.write(next_id)
+        os.replace(path+".tmp", path)
+        return next_id
+
+    def resolve_id(self, seed, summary=False):
+        mode = "summary" if summary else "chat"
+        inp_path = os.path.join(self.persist_directory, ".in_process_id_" + mode + "_" + seed + ".maxdb")
+        out_path = os.path.join(self.persist_directory, ".current_id_" + mode + ".maxdb")
+        os.replace(inp_path, out_path)
 
     def save_ltm(self):
         """
@@ -271,15 +295,16 @@ class AssistantHistory:
         """
         Add query and response to the conversation history.
 
-        :param responses: The assistant responses to be added.
-        :type responses: list
+        :param context: A list containing the query and response.
+        :type context: list
         """
         time_str, utc_time = get_time()
         documents = []
         first_id = None
         ids = []
+        seed = str(uuid.uuid4())
         for i in range(len(context)):
-            context[i]['id'] = self.create_chat_id()
+            context[i]['id'] = self.create_id(seed)
             ids.append(context[i]['id'])
             if first_id is None:
                 first_id = context[i]['id']
@@ -304,8 +329,8 @@ class AssistantHistory:
             documents=documents,
             ids=ids,
         )
+        self.resolve_id(seed)
         self.to_summarize + context
-        self.save_metadata()
 
     def get_system(self) -> dict:
         """
@@ -345,40 +370,16 @@ class AssistantHistory:
                                     "batch_id": batch,
                                     "utc_time": batch_entries[0]['utc_time'],
                                     "num_tokens": self.count_tokens_text(new_summary['content'])}
+            seed = str(uuid.uuid4())
             self.summaries.add(
                 embeddings=[self.embedder(new_summary['content'])],
                 metadatas=[new_summary_metadata.copy()],
                 documents=[new_summary['content']],
-                ids=[self.create_summary_id()],
+                ids=[self.create_id(seed, summary=True)],
             )
+            self.resolve_id(seed, summary=True)
         self.update_ltm()
         self.to_summarize = []
-        self.save_metadata()
-
-    def load_metadata(self):
-        """
-        Load metadata from the JSON file.
-        """
-        try:
-            with open(os.path.join(self.persist_directory, "AssistantHistoryMetadata.json"), "r") as f:
-                data = json.load(f)
-                self.next_id = data["current_id"]+1
-                self.next_summary_id = data["current_summary_id"]+1
-                if self.next_id > 1:
-                    self.history.load(os.path.join(self.persist_directory, "AssistantHistory"),
-                                      embeddings_storage=os.path.join(self.persist_directory, "embeddings"))
-                    self.summaries.load(os.path.join(self.persist_directory, "AssistantSummaries"),
-                                        embeddings_storage=os.path.join(self.persist_directory, "embeddings"))
-        except FileNotFoundError:
-            pass
-
-    def save_metadata(self):
-        """
-        Save metadata to the JSON file.
-        """
-        with open(os.path.join(self.persist_directory, "AssistantHistoryMetadata.json"), "w") as f:
-            json.dump({"current_id": self.next_id-1, "current_summary_id": self.next_summary_id-1,
-                       "to_summarize": self.to_summarize}, f)
 
     def gather_context(self, query: str or list, minimum_recent_history_length: int = 2, max_tokens: int = None,
                        only_summaries: bool = False, only_necessary_fields: bool = True,
@@ -404,7 +405,7 @@ class AssistantHistory:
         :return: A list of relevant context entries for the given query
         :rtype: List[dict]
         """
-        info = {"recent_context":{"ids": [], "num_tokens": 0},
+        info = {"recent_context": {"ids": [], "num_tokens": 0},
                 "history_query": {"ids": [], "num_tokens": 0},
                 "summaries_queries": {"ids": [], "num_tokens": 0},
                 "summaries": {"ids": [], "num_tokens": 0}}
@@ -450,16 +451,16 @@ class AssistantHistory:
                     info["recent_context"]["num_tokens"] += entry["num_tokens"]
                 recent_history_length += 1
 
-
             # If the context is too short, query the full history
-            if token_count < max_tokens and self.next_id > 1:
+            current_id = int(self.get_current_id())
+            if token_count < max_tokens and current_id > 1:
                 query_size = query_n_max
-                if query_size > self.next_id - 1:
-                    query_size = self.next_id - 1
+                if query_size > current_id:
+                    query_size = current_id
                 query_results = self.history.query(query_embeddings=[self.embedder(query)], n_results=query_size)
-                for id in query_results["ids"][0][:query_size]:
-                    if id not in id_added:
-                        result_pos = query_results["ids"][0].index(id)
+                for tid in query_results["ids"][0][:query_size]:
+                    if tid not in id_added:
+                        result_pos = query_results["ids"][0].index(tid)
                         entry = query_results["metadatas"][0][result_pos]
                         if token_count + entry["num_tokens"] > max_tokens:
                             break
@@ -481,12 +482,13 @@ class AssistantHistory:
                 # If the context is still too short, query the summaries
                 if token_count < max_tokens:
                     query_size = query_n_max
-                    if query_size > self.next_summary_id - 1:
-                        query_size = self.next_summary_id - 1
+                    current_summary_id = int(self.get_current_id(summary=True))
+                    if query_size > current_summary_id:
+                        query_size = current_summary_id
                     query_summaries = self.summaries.query(query_embeddings=[self.embedder(query)], n_results=query_size)
-                    for id in query_summaries["ids"][0]:
-                        if id not in summary_ids:
-                            result_pos = query_summaries["ids"][0].index(id)
+                    for tid in query_summaries["ids"][0]:
+                        if tid not in summary_ids:
+                            result_pos = query_summaries["ids"][0].index(tid)
                             entry = query_summaries["metadatas"][0][result_pos]
                             if token_count + entry["num_tokens"] > max_tokens:
                                 break
@@ -496,10 +498,10 @@ class AssistantHistory:
                             if not (entry["source_ids"].split(",")[0] in id_added and
                                     entry["source_ids"].split(",")[1] in id_added):
                                 entry["content"] = query_summaries["documents"][0][result_pos]
-                                summary_ids.append(id)
+                                summary_ids.append(tid)
                                 context_list.insert(0, entry)
                                 token_count += entry["num_tokens"]
-                                info["summaries_queries"]["ids"].append(id)
+                                info["summaries_queries"]["ids"].append(tid)
 
 
             else:
@@ -514,7 +516,7 @@ class AssistantHistory:
             token_count = query_tokens
 
         # Add the summaries if there is any space left
-        current_summary_id = self.next_summary_id - 1
+        current_summary_id = int(self.get_current_id(summary=True))
         while current_summary_id > 0 and token_count < max_tokens:
             if current_summary_id not in summary_ids:
                 result = self.summaries.get(ids=str(current_summary_id), include=['documents', 'metadatas'])
@@ -553,26 +555,22 @@ class AssistantHistory:
         """
         return self.history
 
-    def get_history_from_id_and_earlier(self, id=None, n_results=10, reload_disk=False):
+    def get_history_from_id_and_earlier(self, hid=None, n_results=10):
         """
         Returns the history of the chat assistant from a given id and earlier
 
-        :param id: The id to start from
-        :type id: int
+        :param hid: The id to start from
+        :type hid: int
         :param n_results: The number of results to return
         :type n_results: int
-        :param reload_disk: If the history should be reloaded from disk
-        :type reload_disk: bool
         :return: The history
         :rtype: list
         """
-        if reload_disk:
-            self.reload_from_disk()
-        if id is None:
-            id = self.next_id-1
+        if hid is None:
+            hid = int(self.get_current_id())
         else:
-            id = int(id)
-        target_ids = list(range(id, id-n_results, -1))
+            hid = int(hid)
+        target_ids = list(range(hid, hid-n_results, -1))
         target_ids = [str(x) for x in target_ids if x > 0]
         output = []
         results = self.history.get(ids=target_ids, include=['documents', 'metadatas'])
@@ -592,7 +590,7 @@ class AssistantHistory:
         :return: The history
         :rtype: list
         """
-        tid = self.next_id-1
+        tid = self.get_current_id()
         results = self.history.get(ids=str(tid), include=['documents', 'metadatas'])
         if str(tid) in results["ids"]:
             pos = results["ids"].index(str(tid))
@@ -657,7 +655,7 @@ class AssistantHistory:
                 time_stamp = [time_stamp]
         return time_stamp + output
 
-    def get_summary_from_id_and_earlier(self, id=None, n_results=10, reload_disk=False):
+    def get_summary_from_id_and_earlier(self, id=None, n_results=10):
         """
         Returns the summary of the chat assistant from a given id and earlier
 
@@ -665,15 +663,11 @@ class AssistantHistory:
         :type id: int
         :param n_results: The number of results to return
         :type n_results: int
-        :param reload_disk: If the history should be reloaded from disk
-        :type reload_disk: bool
         :return: The history
         :rtype: list
         """
-        if reload_disk:
-            self.reload_from_disk()
         if id is None:
-            id = self.next_summary_id-1
+            id = int(self.get_current_id(summary=True))
         else:
             id = int(id)
         target_ids = list(range(id, id-n_results, -1))
@@ -687,8 +681,8 @@ class AssistantHistory:
                 entry["content"] = results["documents"][pos]
                 entry["id"] = tid
                 output.append(entry)
-        if len(output) > 1:
-            warnings.warn("Chat assistant: More than one summary found for id {}".format(id))
+            if results["ids"].count(str(tid)) > 1:
+                warnings.warn("Chat assistant: More than one summary found for id {}".format(id))
         return output
 
     def truncate_input_context(self, context):

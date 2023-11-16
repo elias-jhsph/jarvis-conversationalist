@@ -184,7 +184,6 @@ def refresh_assistant():
     if history_changed:
         logger.info("Refreshing history...")
         history_access.reduce_context()
-        history_access.save_metadata()
         logger.info("History saved")
     history_changed = False
 
