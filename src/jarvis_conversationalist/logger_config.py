@@ -45,3 +45,13 @@ def change_logging_level(level):
     logging.getLogger().setLevel(level)
     with open(level_path, 'w') as f:
         f.write(level)
+
+
+def get_log_folder_path():
+    """
+    Get the path to the log folder.
+
+    :return: The path to the log folder.
+    :rtype: str
+    """
+    return logs_dir

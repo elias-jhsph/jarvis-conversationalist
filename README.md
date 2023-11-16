@@ -65,7 +65,7 @@ brew install portaudio
 
 Then press Enter.
 
-If that doesn't work then you need to install homebrew.
+If that doesn't work then you need to install homebrew (you may also want to brew install ffmpeg).
 
 Homebrew is a package manager for Mac that simplifies the installation of software.  
 Open the Terminal app on your Mac (you can find it in Applications > Utilities).  
@@ -73,7 +73,13 @@ Copy and paste the following command into Terminal and press Enter:
 ```bash
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 ```
-Follow the on-screen instructions to complete the installation.  
+Follow the on-screen instructions to complete the installation. 
+Make sure to add Homebrew to your PATH environment variables.
+You may need to create a bash or zsh profile if you don't have one already.
+Google how to do that if you don't know how.
+Then make sure to copy the line that the installer gives you and paste it into your bash or zsh profile.
+Then save the file and restart your terminal.
+Then type brew in your terminal and press enter.
   
 
 3\. Install Portaudio
@@ -85,6 +91,7 @@ brew install portaudio
 ```
 
 Then press Enter.
+Optional: Install ffmpeg the same way
 
   
 4\. Install Jarvis Conversationalist:  

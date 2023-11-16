@@ -45,7 +45,7 @@ models = {"primary": {"name": "gpt-4",
 # Global variables
 history_changed = False
 
-enc = tiktoken.encoding_for_model("gpt-3.5-turbo")
+enc = tiktoken.encoding_for_model("gpt-4")
 assert enc.decode(enc.encode("hello world")) == "hello world"
 tools_list = get_function_list()
 function_info = get_function_info()
@@ -97,7 +97,7 @@ def tokenizer(text):
     :rtype: list
     """
     global enc
-    return enc.encode(text)
+    return enc.encode(text, disallowed_special=())
 
 
 def openai_embedder(query):

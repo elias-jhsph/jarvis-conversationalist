@@ -3,6 +3,7 @@ import datetime
 import json
 import os
 import re
+import time
 import warnings
 import uuid
 from typing import List
@@ -221,13 +222,13 @@ class AssistantHistory:
         path = os.path.join(self.persist_directory, ".in_process_id_"+mode + "_" + seed + ".maxdb")
         if os.path.exists(path):
             with open(path, "r") as f:
-                current = int(f.read())
+                current = f.read()
         else:
             test = os.listdir(os.path.join(self.persist_directory))
             test = [x for x in test if os.path.basename(x).startswith(".in_process_id_"+mode)]
             if len(test) > 0:
                 for fn in test:
-                    os.remove(fn)
+                    os.remove(os.path.join(self.persist_directory, fn))
                 raise Exception("Chat assistant: multiple in process id files found.")
             current = self.get_current_id(summary=summary)
         next_id = str(int(current)+1)
@@ -378,6 +379,7 @@ class AssistantHistory:
                 ids=[self.create_id(seed, summary=True)],
             )
             self.resolve_id(seed, summary=True)
+            time.sleep(0.1)
         self.update_ltm()
         self.to_summarize = []
 
@@ -694,13 +696,6 @@ class AssistantHistory:
         :return: The truncated context.
         :rtype: list
         """
-        total_tokens = 0
-        truncated_context = [context[0]]
-        context.reverse()
-        for entry in context:
-            num_tokens = self.count_tokens_context([entry])
-            if total_tokens + num_tokens > self.max_tokens:
-                break
-            truncated_context.insert(1, entry)
-            total_tokens += num_tokens
-        return truncated_context
+        while self.count_tokens_text(json.dumps(context)) > self.max_tokens:
+            context.pop(1)
+        return context
