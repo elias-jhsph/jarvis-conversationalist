@@ -38,7 +38,6 @@ class TestJarvisConversationalist(unittest.TestCase):
                                                                       stop_event),)
         conversation_thread.start()
         self.assertIsNotNone(conversation_thread)
-        #while not start_event.is_set():
         start_event.wait(timeout=120)
         stop_event.set()
         conversation_thread.join(timeout=60)
@@ -50,10 +49,10 @@ class TestJarvisConversationalist(unittest.TestCase):
 
     def test_process_assistant_response(self):
         # Define a test case
-        a = multiprocessing.Event()
-        b = multiprocessing.Event()
-        query = "What's the weather in Baltimore?"
-        context = process_assistant_response(query, a, b)
+        beeps_stop_event = multiprocessing.Event()
+        interrupt_event = threading.Event()
+        query = "What's the weather in Baltimore?, be quick and just ask google"
+        context = process_assistant_response(query, beeps_stop_event, interrupt_event)
         # Assert that the function returns the expected result
         self.assertIsNotNone(context)
 
