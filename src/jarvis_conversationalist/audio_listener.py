@@ -19,7 +19,7 @@ dynamic_energy_adjustment_damping = 0.15
 dynamic_energy_ratio = 1.5
 
 
-def prep_mic(energy=300, duration: float = 1.0) -> None:
+def prep_mic(energy=300, duration: float = 1.0) -> int:
     """
     Prepare the microphone for listening by adjusting it for ambient noise.
 
@@ -146,20 +146,24 @@ def listen_to_user(energy, silence_threshold=1) -> BytesIO:
     return wave_file_data
 
 
-def audio_capture_process(audio_queue, speaking):
+def audio_capture_process(audio_queue, speaking, stop_event):
     """
     Captures audio from the microphone and puts it in the audio queue.
     :param audio_queue:
     :param speaking:
-    :param current_recording_tag:
+    :param stop_event:
     :return: None
     """
     try:
+        first = True
         level = prep_mic()
-        while True:
+        while stop_event.is_set() is False:
             if not speaking.is_set():
                 audio_data = listen_to_user(level)
-                if not speaking.is_set() and audio_data is not None:
-                    audio_queue.put(audio_data)
+                if not speaking.is_set() and not stop_event.is_set() and audio_data is not None:
+                    audio_queue.put((audio_data, time.time()))
+                if first:
+                    first = False
+                    audio_queue.put((None, time.time()))
     except KeyboardInterrupt:
         return

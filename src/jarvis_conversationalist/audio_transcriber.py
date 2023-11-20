@@ -32,21 +32,24 @@ def convert_to_text(audio: BytesIO) -> str:
     return result["text"]
 
 
-def audio_processing_process(audio_queue, text_queue, speaking):
+def audio_processing_process(audio_queue, text_queue, speaking, stop_event):
     """
     Transcribes audio from the audio queue and puts it in the text queue.
     :param audio_queue:
     :param text_queue:
     :param speaking:
+    :param stop_event:
     :return:
     """
     try:
-        while True:
+        while stop_event.is_set() is False:
             if not speaking.is_set():
-                audio_data = audio_queue.get()
-                if not speaking.is_set():
+                audio_data, ts = audio_queue.get()
+                if not speaking.is_set() and audio_data is not None:
                     text = convert_to_text(audio_data)
                     if not speaking.is_set():
-                        text_queue.put(text)
+                        text_queue.put((text, ts))
+                if audio_data is None:
+                    text_queue.put(("", ts))
     except KeyboardInterrupt:
         return

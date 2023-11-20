@@ -1,4 +1,5 @@
 import json
+import atexit
 import tiktoken
 import certifi
 import os
@@ -53,6 +54,7 @@ function_info = get_function_info()
 # Setup background task system
 executor = ThreadPoolExecutor(max_workers=1)
 tasks = []
+atexit.register(executor.shutdown, wait=True)
 
 
 def summarizer(input_list):

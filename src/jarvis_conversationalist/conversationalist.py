@@ -1,11 +1,13 @@
+import multiprocessing
+import queue
+import sys
+import threading
 import time
 import os
 import re
 from statistics import mean
-import multiprocessing
 import certifi
 from numpy import average
-import atexit
 import importlib.resources as pkg_resources
 
 from .openai_utility_functions import check_for_directed_at_me, check_for_completion, extract_query
@@ -14,7 +16,6 @@ from .streaming_response_audio import stream_audio_response, set_rt_text_queue
 from .audio_player import play_audio_file
 from .audio_listener import audio_capture_process
 from .audio_transcriber import audio_processing_process
-
 
 from .logger_config import get_logger
 logger = get_logger()
@@ -54,7 +55,7 @@ def process_assistant_response(query, beeps_stop_event, interrupt_event):
     :rtype: list
     """
     new_history = [{"content": query, "role": "user"}]
-    current_stream = multiprocessing.Queue()
+    current_stream = queue.Queue()
     set_rt_text_queue(current_stream)
     content, reason, tool_calls = stream_audio_response(stream_response(new_history),
                                                         stop_audio_event=beeps_stop_event,
@@ -84,51 +85,65 @@ def process_assistant_response(query, beeps_stop_event, interrupt_event):
     return new_history
 
 
-def converse(memory, interrupt_event, process_queue):
+def converse(memory, interrupt_event, start_event, stop_event):
     """
     Converse with the user.
     :param memory:
     :type memory: int
-    :param interrupt_event:
-    :type interrupt_event: multiprocessing.Event
-    :param ready_event:
-    :type ready_event: multiprocessing.Event
-    :return: None
+    :param interrupt_event: An event to indicate that the user has interrupted the assistant.
+    :type interrupt_event: threading.Event
+    :param start_event: An event to indicate that the assistant has started.
+    :type start_event: threading.Event
+    :param stop_event: An event to indicate that the assistant should stop.
+    :type stop_event: threading.Event
+    :return:
     """
-    try:
-        audio_queue = multiprocessing.Queue()
-        text_queue = multiprocessing.Queue()
+    audio_queue = multiprocessing.Queue()
+    text_queue = queue.Queue()
+    multiprocessing_stop_event = multiprocessing.Event()
 
-        speaking = multiprocessing.Event()
-        capture_process = multiprocessing.Process(target=audio_capture_process,
-                                                  args=(audio_queue, speaking), )
-        processing_process = multiprocessing.Process(target=audio_processing_process,
-                                                     args=(audio_queue, text_queue, speaking))
-        atexit.register(capture_process.terminate)
-        atexit.register(processing_process.terminate)
+    speaking = multiprocessing.Event()
+    capture_process = multiprocessing.Process(target=audio_capture_process,
+                                              args=(audio_queue, speaking, multiprocessing_stop_event), )
+    processing_thread = threading.Thread(target=audio_processing_process,
+                                          args=(audio_queue, text_queue, speaking, stop_event))
 
-        capture_process.start()
-        processing_process.start()
+    capture_process.start()
+    processing_thread.start()
 
-        # Rolling buffer to store text
-        transcript = []
-        timestamps = []
-        schedule_refresh_assistant()
+    # Rolling buffer to store text
+    transcript = []
+    timestamps = []
+    schedule_refresh_assistant()
+    while text_queue.empty():
+        threading.Event().wait(1)
+    while text_queue.empty() is False:
+        text_queue.get()
+    play_audio_file(core_path + "/tone_one.wav", blocking=False)
+    start_event.set()
+    last_response_time = None
+    avg_delay = 0
+    delays = []
+    while not stop_event.is_set():
+        interrupt_event.clear()
         try:
-            test = audio_queue.get(timeout=10)
-        except multiprocessing.queues.Empty:
-            play_audio_file(core_path + "/tone_two.wav", blocking=False, loops=4)
-            audio_queue.get()
-        play_audio_file(core_path + "/tone_one.wav", blocking=False)
-        process_queue.put("start")
-        last_response_time = None
-        while True:
-            interrupt_event.clear()
-            text = text_queue.get()
+            text, ts = text_queue.get(timeout=1)
+            delays.append(time.time() - ts)
+            avg_delay = average(delays)
+            logger.info("Average delay:"+" "+str(avg_delay))
+            if len(delays) > 10:
+                delays.pop(0)
+            if text == "Thank you for watching." or text == "Thanks for watching!":
+                text = ""
             if bool(re.search('[a-zA-Z0-9]', text)):
+                logger.info("Raw text:" + text)
                 transcript.append(text)
                 timestamps.append(time.time())
-
+        except queue.Empty:
+            text = ""
+            # wait for 1 second
+            threading.Event().wait(1)
+        if text != "":
             # Clean up old entries
             current_time = time.time()
             while transcript and timestamps[0] < current_time - memory:
@@ -148,14 +163,14 @@ def converse(memory, interrupt_event, process_queue):
                 if len(directed_at_results) == 0:
                     probably_at_me = False
                 else:
-                    target_intended = 0.8
+                    target_intended = 0.7
                     probably_at_me = average(directed_at_results) > target_intended
                 logger.info("Probability at me: " + str(directed_at_results))
                 if probably_at_me:
                     completion_results = check_for_completion(transcript)
                     logger.info("Probability of completion:" + str(completion_results))
                     completion_results = [x for x in completion_results if x <= 1.0]
-                    target_completion = 0.8
+                    target_completion = 0.7
                     if len(completion_results) == 0:
                         completed = False
                     else:
@@ -211,6 +226,12 @@ def converse(memory, interrupt_event, process_queue):
                     last_response_time = time.time()
                     speaking.clear()
                     play_audio_file(core_path+"/tone_one.wav", blocking=False, delay=2)
+    interrupt_event.set()
+    speaking.set()
+    processing_thread.join(timeout=10)
+    multiprocessing_stop_event.set()
+    capture_process.join(timeout=10)
 
-    except KeyboardInterrupt:
-        return
+
+if __name__ == "__main__":
+    converse(60, threading.Event(), threading.Event(), threading.Event())
