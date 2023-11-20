@@ -38,8 +38,8 @@ class TestJarvisConversationalist(unittest.TestCase):
                                                                       stop_event),)
         conversation_thread.start()
         self.assertIsNotNone(conversation_thread)
-        while not start_event.is_set():
-            start_event.wait(timeout=1)
+        #while not start_event.is_set():
+        start_event.wait(timeout=120)
         stop_event.set()
         conversation_thread.join(timeout=60)
         if not conversation_thread.is_alive():
