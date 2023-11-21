@@ -24,7 +24,7 @@ jobs:
           pip install toml
           pip install .
       - name: Test package
-        timeout-minutes: 15
+        timeout-minutes: 7
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: python -m unittest
