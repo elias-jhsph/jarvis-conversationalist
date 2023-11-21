@@ -109,24 +109,21 @@ def converse(memory, interrupt_event, start_event, stop_event):
                                           args=(audio_queue, text_queue, speaking, stop_event))
 
     capture_process.start()
-    #processing_thread.start()
+    processing_thread.start()
 
     # Rolling buffer to store text
     transcript = []
     timestamps = []
     schedule_refresh_assistant()
-    while audio_queue.empty():
+    logger.info("Waiting for text queue...")
+    while text_queue.empty():
         threading.Event().wait(1)
-        logger.info("Waiting for audio queue to fill...")
-    logger.info("Audio queue filled")
-    if text_queue.empty():
-        raise Exception("Test")
+    logger.info("Starting...")
     while text_queue.empty() is False:
         text_queue.get()
     play_audio_file(core_path + "/tone_one.wav", blocking=False)
     start_event.set()
     last_response_time = None
-    avg_delay = 0
     delays = []
     while not stop_event.is_set():
         interrupt_event.clear()
