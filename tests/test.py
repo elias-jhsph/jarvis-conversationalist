@@ -39,6 +39,7 @@ class TestJarvisConversationalist(unittest.TestCase):
         audio_data = listen_to_user(level)
         self.assertIsNotNone(audio_data)
 
+
     # def test_audio_process(self):
     #     audio_queue = multiprocessing.Queue()
     #     speaking = multiprocessing.Event()

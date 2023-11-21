@@ -61,6 +61,7 @@ In Terminal, type:
 
 ```bash
 brew install portaudio
+brew install ffmpeg
 ```
 
 Then press Enter.
@@ -91,7 +92,11 @@ brew install portaudio
 ```
 
 Then press Enter.
-Optional: Install ffmpeg the same way
+Install ffmpeg the same way
+
+```bash
+brew install ffmpeg
+```
 
   
 4\. Install Jarvis Conversationalist:  

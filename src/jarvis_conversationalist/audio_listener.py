@@ -64,7 +64,7 @@ def prep_mic(energy=300, duration: float = 1.0) -> int:
     return energy
 
 
-def listen_to_user(energy, silence_threshold=.5) -> BytesIO:
+def listen_to_user(energy, silence_threshold=.5, maximum_seconds=300) -> BytesIO:
     """
     Listen to the user and record their speech, stopping when there's silence.
 
@@ -88,7 +88,7 @@ def listen_to_user(energy, silence_threshold=.5) -> BytesIO:
     silence_duration = 0
     start = time.time()
 
-    while True:
+    while time.time() - start < maximum_seconds:
         # Read a chunk of audio data from the stream
 
         chunk = stream.read(4096, exception_on_overflow=False)
