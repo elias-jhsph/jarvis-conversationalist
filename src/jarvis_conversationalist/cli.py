@@ -44,14 +44,13 @@ def main():
     if get_openai_key() is None:
         print("Please set your OpenAI API key using the --key argument once to cache your key.")
         return
-
+    print("Please wait while Jarvis boots...", end='\r')
     interrupt_event = threading.Event()
     start_event = threading.Event()
     stop_event = threading.Event()
     conversation_thread = threading.Thread(target=converse, args=(60, interrupt_event, start_event, stop_event),)
     conversation_thread.start()
 
-    print()
     hello = "\rListening... Click \"Enter\" to interrupt Jarvis. Click \"Esc\" then \"Enter\" to Quit.\033[K"
     LINE_UP = '\033[1A'
     LINE_CLEAR = '\x1b[2K'
@@ -72,22 +71,23 @@ def main():
                         reset_time = time.time()
                     elif user_input == '\x1b':
                         # Clear the line and then print "Quitting Jarvis"
-                        print("\r\033[KQuitting Jarvis.\033[K", end='\r')
+                        print("\r\033[KQuitting Jarvis...\033[K", end='\r')
                         stop_event.set()
                         while conversation_thread.is_alive():
-                            threading.Event().wait(timeout=1)
-                        conversation_thread.join(timeout=1)
+                            threading.Event().wait(timeout=10)
+                        conversation_thread.join(timeout=10)
                         return
             else:
                 raise Exception("Conversation process is not alive!")
 
     except KeyboardInterrupt:
         print()
-        print("Interrupted by user!")
+        print("Interrupted by user! Please Wait...")
         stop_event.set()
         while conversation_thread.is_alive():
-            threading.Event().wait(timeout=1)
-        conversation_thread.join(timeout=1)
+            print("Shutting down...")
+            threading.Event().wait(timeout=10)
+        conversation_thread.join(timeout=10)
         return
 
 

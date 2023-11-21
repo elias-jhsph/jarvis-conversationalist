@@ -15,7 +15,7 @@ from .openai_interface import stream_response, resolve_response, use_tools, sche
 from .streaming_response_audio import stream_audio_response, set_rt_text_queue
 from .audio_player import play_audio_file
 from .audio_listener import audio_capture_process
-from .audio_transcriber import audio_processing_process
+from .audio_transcriber import audio_processing_thread
 
 from .logger_config import get_logger
 logger = get_logger()
@@ -105,7 +105,7 @@ def converse(memory, interrupt_event, start_event, stop_event):
     speaking = multiprocessing.Event()
     capture_process = multiprocessing.Process(target=audio_capture_process,
                                               args=(audio_queue, speaking, multiprocessing_stop_event), )
-    processing_thread = threading.Thread(target=audio_processing_process,
+    processing_thread = threading.Thread(target=audio_processing_thread,
                                           args=(audio_queue, text_queue, speaking, stop_event))
 
     capture_process.start()
@@ -128,15 +128,17 @@ def converse(memory, interrupt_event, start_event, stop_event):
         interrupt_event.clear()
         try:
             text, ts = text_queue.get(timeout=1)
-            delays.append(time.time() - ts)
-            avg_delay = average(delays)
-            logger.info("Average delay:"+" "+str(avg_delay))
-            if len(delays) > 10:
-                delays.pop(0)
-            if text == "Thank you for watching." or text == "Thanks for watching!":
+            text = text.strip()
+            if text == "Thank you for watching." or text == "Thanks for watching!"\
+                    or text == "Thanks for watching." or text == "Thank you for watching!"\
+                    or text == "Thanks for watching!" or text == "You":
                 text = ""
             if bool(re.search('[a-zA-Z0-9]', text)):
-                logger.info("Raw text:" + text)
+                delays.append(time.time() - ts)
+                avg_delay = average(delays)
+                if len(delays) > 10:
+                    delays.pop(0)
+                logger.info("Average delay:" + " " + str(avg_delay) + " Raw text: " + text)
                 transcript.append(text)
                 timestamps.append(time.time())
         except queue.Empty:
@@ -182,7 +184,7 @@ def converse(memory, interrupt_event, start_event, stop_event):
                         current_time = time.time()
                         while time.time() - current_time < max_time and additions < max_additions:
                             if not text_queue.empty():
-                                text = text_queue.get()
+                                text, ts = text_queue.get()
                                 if bool(re.search('[a-zA-Z0-9]', text)):
                                     logger.info(" - - - Adding to transcript: " + text)
                                     transcript.append(text)
@@ -197,6 +199,8 @@ def converse(memory, interrupt_event, start_event, stop_event):
                                         completed = mean(completion_results) > target_completion
                                     if completed:
                                         additions = max_additions
+                            else:
+                                threading.Event().wait(0.3)
                     speaking.set()
                     beeps_stop_event = play_audio_file(core_path+"/beeps.wav", loops=7, blocking=False)
                     extracted_query = extract_query(transcript)
@@ -212,6 +216,7 @@ def converse(memory, interrupt_event, start_event, stop_event):
                                             "role": "assistant"}]
                     logger.info("Resolving...")
                     resolve_response(new_history)
+                    schedule_refresh_assistant()
                     logger.info("Resolved")
                     if interrupt_event.is_set():
                         logger.info("Interrupted")
@@ -228,9 +233,12 @@ def converse(memory, interrupt_event, start_event, stop_event):
                     play_audio_file(core_path+"/tone_one.wav", blocking=False, delay=2)
     interrupt_event.set()
     speaking.set()
-    processing_thread.join(timeout=10)
     multiprocessing_stop_event.set()
-    capture_process.join(timeout=10)
+    audio_queue.put((None, time.time()))
+    audio_queue.put((None, time.time()))
+    audio_queue.put((None, time.time()))
+    processing_thread.join(timeout=20)
+    capture_process.join(timeout=20)
 
 
 if __name__ == "__main__":

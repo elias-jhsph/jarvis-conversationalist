@@ -1,4 +1,5 @@
 import os
+import threading
 from io import BytesIO
 from soundfile import read
 from numpy import float32
@@ -32,7 +33,7 @@ def convert_to_text(audio: BytesIO) -> str:
     return result["text"]
 
 
-def audio_processing_process(audio_queue, text_queue, speaking, stop_event):
+def audio_processing_thread(audio_queue, text_queue, speaking, stop_event):
     """
     Transcribes audio from the audio queue and puts it in the text queue.
     :param audio_queue:
@@ -41,15 +42,11 @@ def audio_processing_process(audio_queue, text_queue, speaking, stop_event):
     :param stop_event:
     :return:
     """
-    try:
-        while stop_event.is_set() is False:
+    while stop_event.is_set() is False:
+        audio_data, ts = audio_queue.get()
+        if not speaking.is_set() and audio_data is not None:
+            text = convert_to_text(audio_data)
             if not speaking.is_set():
-                audio_data, ts = audio_queue.get()
-                if not speaking.is_set() and audio_data is not None:
-                    text = convert_to_text(audio_data)
-                    if not speaking.is_set():
-                        text_queue.put((text, ts))
-                if audio_data is None:
-                    text_queue.put(("", ts))
-    except KeyboardInterrupt:
-        return
+                text_queue.put((text, ts))
+        if audio_data is None:
+            text_queue.put(("", ts))

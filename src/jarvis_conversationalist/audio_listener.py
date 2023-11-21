@@ -64,7 +64,7 @@ def prep_mic(energy=300, duration: float = 1.0) -> int:
     return energy
 
 
-def listen_to_user(energy, silence_threshold=1) -> BytesIO:
+def listen_to_user(energy, silence_threshold=.5) -> BytesIO:
     """
     Listen to the user and record their speech, stopping when there's silence.
 

@@ -13,7 +13,7 @@ from pyaudio import PyAudio, paInt16
 from typing import Iterator, Dict, Tuple, Optional
 from .text_speech import text_to_speech, TextToSpeechError
 
-warnings.filterwarnings("ignore", category=UserWarning, module="spacy.pipeline.lemmatizer", lineno=211)
+warnings.filterwarnings("ignore", message=".*The rule-based lemmatizer did not find POS annotation.*")
 
 try:
     nlp = spacy.load('en_core_web_sm', disable=["tagger", "parser", "ner"])
