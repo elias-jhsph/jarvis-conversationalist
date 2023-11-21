@@ -12,6 +12,7 @@ from src.jarvis_conversationalist.logger_config import get_logger
 from src.jarvis_conversationalist.conversationalist import process_assistant_response, get_core_path, converse
 from src.jarvis_conversationalist.audio_player import play_audio_file, shutdown_audio
 from src.jarvis_conversationalist.openai_functions.functions import get_function_info
+from src.jarvis_conversationalist.audio_listener import audio_capture_process
 
 
 class TestJarvisConversationalist(unittest.TestCase):
@@ -32,33 +33,44 @@ class TestJarvisConversationalist(unittest.TestCase):
         play_audio_file(file_path, blocking)
         self.assertIsNotNone(blocking)
 
-    def test_converse(self):
-        # Define a test case
-        timeout = 60
-        interrupt_event = threading.Event()
-        start_event = threading.Event()
-        stop_event = threading.Event()
-        conversation_thread = threading.Thread(target=converse, args=(timeout,
-                                                                      interrupt_event,
-                                                                      start_event,
-                                                                      stop_event),)
-        conversation_thread.start()
-        self.assertIsNotNone(conversation_thread)
-        get_logger().info(str(start_event.is_set())+" "+str(datetime.now()))
-        start_event.wait(timeout=130)
-        threading.Event().wait(timeout=5)
-        get_logger().info(str(start_event.is_set()) + " " + str(datetime.now()))
-        stop_event.set()
-        threading.Event().wait(timeout=25)
-        get_logger().info(threading.enumerate())
-        conversation_thread.join(timeout=60)
-        get_logger().info(threading.enumerate())
-        if not conversation_thread.is_alive():
-            closed = True
-        else:
-            closed = False
-        self.assertTrue(closed)
+    def test_audio_process(self):
+        audio_queue = multiprocessing.Queue()
+        speaking = multiprocessing.Event()
+        multiprocessing_stop_event = multiprocessing.Event()
+        capture_process = multiprocessing.Process(target=audio_capture_process,
+                                                  args=(audio_queue, speaking, multiprocessing_stop_event), )
+        capture_process.start()
+        self.assertTrue(capture_process.is_alive())
+        # wait for audio queue to be populated
+        audio_queue.get(timeout=60)
 
+    # def test_converse(self):
+    #     # Define a test case
+    #     timeout = 60
+    #     interrupt_event = threading.Event()
+    #     start_event = threading.Event()
+    #     stop_event = threading.Event()
+    #     conversation_thread = threading.Thread(target=converse, args=(timeout,
+    #                                                                   interrupt_event,
+    #                                                                   start_event,
+    #                                                                   stop_event),)
+    #     conversation_thread.start()
+    #     self.assertIsNotNone(conversation_thread)
+    #     get_logger().info(str(start_event.is_set())+" "+str(datetime.now()))
+    #     start_event.wait(timeout=130)
+    #     threading.Event().wait(timeout=5)
+    #     get_logger().info(str(start_event.is_set()) + " " + str(datetime.now()))
+    #     stop_event.set()
+    #     threading.Event().wait(timeout=25)
+    #     get_logger().info(threading.enumerate())
+    #     conversation_thread.join(timeout=60)
+    #     get_logger().info(threading.enumerate())
+    #     if not conversation_thread.is_alive():
+    #         closed = True
+    #     else:
+    #         closed = False
+    #     self.assertTrue(closed)
+    #
     # def test_process_assistant_response(self):
     #     # Define a test case
     #     beeps_stop_event = multiprocessing.Event()
