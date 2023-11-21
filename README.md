@@ -13,7 +13,7 @@ Jarvis Conversationalist is a Python-based project that provides a conversationa
 
 This package is availible here [https://pypi.org/project/jarvis-conversationalist/](https://pypi.org/project/jarvis-conversationalist/)
 
-This project requires Python 3.11 or later. For mac, install portaudio and then pip install the package:
+This project requires Python 3.11 or later. For mac, install portaudio, ffmpeg, and then pip install the package:
 
 ```bash
 brew install portaudio
