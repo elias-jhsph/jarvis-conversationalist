@@ -12,7 +12,7 @@ from src.jarvis_conversationalist.logger_config import get_logger
 from src.jarvis_conversationalist.conversationalist import process_assistant_response, get_core_path, converse
 from src.jarvis_conversationalist.audio_player import play_audio_file, shutdown_audio
 from src.jarvis_conversationalist.openai_functions.functions import get_function_info
-from src.jarvis_conversationalist.audio_listener import audio_capture_process
+from src.jarvis_conversationalist.audio_listener import audio_capture_process, listen_to_user, prep_mic
 
 
 class TestJarvisConversationalist(unittest.TestCase):
@@ -33,16 +33,22 @@ class TestJarvisConversationalist(unittest.TestCase):
         play_audio_file(file_path, blocking)
         self.assertIsNotNone(blocking)
 
-    def test_audio_process(self):
-        audio_queue = multiprocessing.Queue()
-        speaking = multiprocessing.Event()
-        multiprocessing_stop_event = multiprocessing.Event()
-        capture_process = multiprocessing.Process(target=audio_capture_process,
-                                                  args=(audio_queue, speaking, multiprocessing_stop_event), )
-        capture_process.start()
-        self.assertTrue(capture_process.is_alive())
-        # wait for audio queue to be populated
-        audio_queue.get(timeout=60)
+    def test_listen_to_user(self):
+        # Define a test case
+        level = prep_mic()
+        audio_data = listen_to_user(level)
+        self.assertIsNotNone(audio_data)
+
+    # def test_audio_process(self):
+    #     audio_queue = multiprocessing.Queue()
+    #     speaking = multiprocessing.Event()
+    #     multiprocessing_stop_event = multiprocessing.Event()
+    #     capture_process = multiprocessing.Process(target=audio_capture_process,
+    #                                               args=(audio_queue, speaking, multiprocessing_stop_event), )
+    #     capture_process.start()
+    #     self.assertTrue(capture_process.is_alive())
+    #     # wait for audio queue to be populated
+    #     audio_queue.get(timeout=60)
 
     # def test_converse(self):
     #     # Define a test case
