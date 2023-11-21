@@ -32,7 +32,7 @@ class TestJarvisConversationalist(unittest.TestCase):
         play_audio_file(file_path, blocking)
         self.assertIsNotNone(blocking)
 
-    def test_converse_quit(self):
+    def test_converse(self):
         # Define a test case
         timeout = 60
         interrupt_event = threading.Event()

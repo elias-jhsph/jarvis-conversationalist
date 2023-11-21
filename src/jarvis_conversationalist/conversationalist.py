@@ -99,28 +99,41 @@ def converse(memory, interrupt_event, start_event, stop_event):
     :return:
     """
     audio_queue = multiprocessing.Queue()
+    logger.info("Audio queue created")
     text_queue = queue.Queue()
+    logger.info("Text queue created")
     multiprocessing_stop_event = multiprocessing.Event()
+    logger.info("Stop event created")
 
     speaking = multiprocessing.Event()
+
     capture_process = multiprocessing.Process(target=audio_capture_process,
                                               args=(audio_queue, speaking, multiprocessing_stop_event), )
+
+    logger.info("Speaking event created")
     processing_thread = threading.Thread(target=audio_processing_thread,
                                           args=(audio_queue, text_queue, speaking, stop_event))
-
+    logger.info("Capture process created")
     capture_process.start()
+    logger.info("Capture process started")
     processing_thread.start()
+    logger.info("Processing thread started")
 
     # Rolling buffer to store text
     transcript = []
     timestamps = []
     schedule_refresh_assistant()
+    logger.info("Assistant scheduled")
     while text_queue.empty():
         threading.Event().wait(1)
+        logger.info("Waiting for text...")
     while text_queue.empty() is False:
         text_queue.get()
+    logger.info("Text queue cleared")
     play_audio_file(core_path + "/tone_one.wav", blocking=False)
+    logger.info("Tone played")
     start_event.set()
+    logger.info("Start event set")
     last_response_time = None
     avg_delay = 0
     delays = []
