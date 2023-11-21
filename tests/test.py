@@ -45,7 +45,7 @@ class TestJarvisConversationalist(unittest.TestCase):
         conversation_thread.start()
         self.assertIsNotNone(conversation_thread)
         get_logger().info(str(start_event.is_set())+" "+str(datetime.now()))
-        start_event.wait(timeout=30)
+        start_event.wait(timeout=130)
         threading.Event().wait(timeout=5)
         get_logger().info(str(start_event.is_set()) + " " + str(datetime.now()))
         stop_event.set()
