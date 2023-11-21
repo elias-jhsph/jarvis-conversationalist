@@ -3,6 +3,8 @@ import multiprocessing
 import threading
 import unittest
 import os
+from datetime import datetime
+
 from src.jarvis_conversationalist.config import get_openai_key
 if get_openai_key() is not None:
     os.environ["OPENAI_API_KEY"] = get_openai_key()
@@ -42,8 +44,12 @@ class TestJarvisConversationalist(unittest.TestCase):
                                                                       stop_event),)
         conversation_thread.start()
         self.assertIsNotNone(conversation_thread)
+        get_logger().info(str(start_event.is_set())+" "+str(datetime.now()))
         start_event.wait(timeout=30)
+        threading.Event().wait(timeout=5)
+        get_logger().info(str(start_event.is_set()) + " " + str(datetime.now()))
         stop_event.set()
+        threading.Event().wait(timeout=25)
         get_logger().info(threading.enumerate())
         conversation_thread.join(timeout=60)
         get_logger().info(threading.enumerate())
