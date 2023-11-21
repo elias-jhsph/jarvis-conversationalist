@@ -10,19 +10,20 @@ if not os.path.exists(logs_dir):
 
 level_path = os.path.join(logs_dir, "level.txt")
 logger_path = os.path.join(logs_dir, "jarvis_process.log")
-
+logger_stream = logging.StreamHandler()
+logger_stream.setFormatter(logging.Formatter('\033[K%(asctime)s [%(levelname)s] - %(message)s'))
+rotating_handler = RotatingFileHandler(logger_path, maxBytes=1024*10, backupCount=3)
 # Set up a logger
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s [%(levelname)s] - %(message)s',
-                    handlers=[logging.FileHandler(logger_path), logging.StreamHandler()])
-
-handler = RotatingFileHandler(logger_path, maxBytes=1024*10, backupCount=3)
-
-logging.getLogger().addHandler(handler)
+                    handlers=[logging.FileHandler(logger_path), rotating_handler])
 
 if os.path.exists(level_path):
     with open(level_path, 'r') as f:
-        logging.getLogger().setLevel(f.read())
+        wlevel = f.read()
+    logging.getLogger().setLevel(wlevel)
+    if wlevel != "ERROR":
+        logging.getLogger().addHandler(logger_stream)
 
 
 def get_logger():
@@ -45,7 +46,8 @@ def change_logging_level(level):
     logging.getLogger().setLevel(level)
     with open(level_path, 'w') as f:
         f.write(level)
-
+    if level != "ERROR":
+        logging.getLogger().addHandler(logger_stream)
 
 def get_log_folder_path():
     """

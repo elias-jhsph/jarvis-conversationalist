@@ -1,5 +1,4 @@
 import argparse
-import sys
 import threading
 import time
 
@@ -51,14 +50,15 @@ def main():
     conversation_thread = threading.Thread(target=converse, args=(60, interrupt_event, start_event, stop_event),)
     conversation_thread.start()
 
-    hello = "\rListening... Click \"Enter\" to interrupt Jarvis. Click \"Esc\" then \"Enter\" to Quit.\033[K"
+    hello = "\rSay my name, 'Jarvis', to get my attention... Click \"Enter\" to interrupt me. " \
+            "Click \"Esc\" then \"Enter\" to turn me off.\033[K"
     LINE_UP = '\033[1A'
     LINE_CLEAR = '\x1b[2K'
     try:
         while True:
             if conversation_thread.is_alive():
                 if not start_event.is_set():
-                    print("\033[KBooting...\033[K", end='\r')
+                    print("\033[KI am booting...\033[K", end='\r')
                     start_event.wait(timeout=1)
                 else:
                     user_input = input(hello)
@@ -67,11 +67,11 @@ def main():
                         # Clear the line and then print "Interrupted."
                         print(end=LINE_CLEAR)
                         print(LINE_UP, end=LINE_CLEAR)
-                        print("\033[KInterrupted.\033[K", end='\r')
+                        print("\033[KSorry for going on and on.\033[K", end='\r')
                         reset_time = time.time()
                     elif user_input == '\x1b':
                         # Clear the line and then print "Quitting Jarvis"
-                        print("\r\033[KQuitting Jarvis...\033[K", end='\r')
+                        print("\r\033[KI am starting my shutdown process...\033[K", end='\r')
                         stop_event.set()
                         while conversation_thread.is_alive():
                             threading.Event().wait(timeout=10)
@@ -82,7 +82,7 @@ def main():
 
     except KeyboardInterrupt:
         print()
-        print("Interrupted by user! Please Wait...")
+        print("Shutting down ASAP! Please Wait...")
         stop_event.set()
         while conversation_thread.is_alive():
             print("Shutting down...")
