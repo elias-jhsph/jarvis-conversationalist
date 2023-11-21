@@ -1,3 +1,4 @@
+import logging
 import multiprocessing
 import threading
 import unittest
@@ -43,9 +44,9 @@ class TestJarvisConversationalist(unittest.TestCase):
         self.assertIsNotNone(conversation_thread)
         start_event.wait(timeout=30)
         stop_event.set()
-        print(threading.enumerate())
+        get_logger().info(threading.enumerate())
         conversation_thread.join(timeout=60)
-        print(threading.enumerate())
+        get_logger().info(threading.enumerate())
         if not conversation_thread.is_alive():
             closed = True
         else:
