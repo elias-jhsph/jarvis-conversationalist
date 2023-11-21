@@ -11,10 +11,13 @@ Jarvis Conversationalist is a Python-based project that provides a conversationa
 
 ## Installation
 
+This package is availible here [https://pypi.org/project/jarvis-conversationalist/](https://pypi.org/project/jarvis-conversationalist/)
+
 This project requires Python 3.11 or later. For mac, install portaudio and then pip install the package:
 
 ```bash
 brew install portaudio
+brew install ffmpeg
 pip install jarvis_conversationalist
 ```
 
@@ -124,9 +127,9 @@ Using Jarvis Conversationalist
   
 To set your OpenAI API username and key, use:  
 ```bash
-jarvis --u= ser YOUR_USERNAME --key YOUR_KEY 
+jarvis --user YOUR_USERNAME --key YOUR_KEY 
 ```
-Replace YOUR_USERNAME and YOUR_KEY = with your actual OpenAI username and API key.  
+Replace YOUR_USERNAME and YOUR_KEY with your actual OpenAI username and API key.  
 After your first successful use go to terminal
 
 ```bash
