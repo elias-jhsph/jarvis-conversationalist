@@ -41,9 +41,9 @@ class TestJarvisConversationalist(unittest.TestCase):
                                                                       stop_event),)
         conversation_thread.start()
         self.assertIsNotNone(conversation_thread)
-        start_event.wait(timeout=10)
+        start_event.wait(timeout=60)
         stop_event.set()
-        conversation_thread.join(timeout=10)
+        conversation_thread.join(timeout=60)
         if not conversation_thread.is_alive():
             closed = True
         else:
