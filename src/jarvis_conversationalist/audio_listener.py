@@ -7,6 +7,7 @@ from numpy import frombuffer, int16, average
 from pyaudio import PyAudio, paInt16, get_sample_size
 
 from .logger_config import get_logger
+
 logger = get_logger()
 
 # Initialize the speech recognition module and microphone
@@ -64,7 +65,7 @@ def prep_mic(energy=300, duration: float = 1.0) -> int:
     return energy
 
 
-def listen_to_user(energy, silence_threshold=.5, maximum_seconds=120) -> BytesIO:
+def listen_to_user(energy, silence_threshold=.25, maximum_seconds=120) -> BytesIO:
     """
     Listen to the user and record their speech, stopping when there's silence.
 

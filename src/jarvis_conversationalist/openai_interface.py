@@ -1,5 +1,4 @@
 import json
-import atexit
 import tiktoken
 import certifi
 import os
@@ -11,6 +10,7 @@ from concurrent.futures import ThreadPoolExecutor
 from .config import get_user
 from .assistant_history import AssistantHistory
 from .openai_functions.functions import get_function_list, get_function_info, get_system_appendix
+from .speaker_functions import get_speaker_function_list, get_speaker_function_info, get_speaker_system_appendix
 import re
 
 client = OpenAI()
@@ -48,8 +48,11 @@ history_changed = False
 
 enc = tiktoken.encoding_for_model("gpt-4")
 assert enc.decode(enc.encode("hello world")) == "hello world"
-tools_list = get_function_list()
+tools_list = get_function_list() + get_speaker_function_list()
 function_info = get_function_info()
+speaker_info = get_speaker_function_info()
+for speaker_info_key, speaker_info_value in speaker_info.items():
+    function_info[speaker_info_key] = speaker_info_value
 
 # Setup background task system
 executor = ThreadPoolExecutor(max_workers=1)
@@ -71,12 +74,12 @@ def summarizer(input_list):
                                          " with your best attempt at a summary and leave out caveats, preambles, "
                                          "or next steps)"}]
     response = client.chat.completions.create(model=models["fall_back"]['name'],
-    messages=input_list+query,
-    temperature=models["fall_back"]["temperature"],
-    max_tokens=models["fall_back"]["max_message"],
-    top_p=models["fall_back"]["top_p"],
-    frequency_penalty=models["fall_back"]["frequency_penalty"],
-    presence_penalty=models["fall_back"]["presence_penalty"])
+                                              messages=input_list+query,
+                                              temperature=models["fall_back"]["temperature"],
+                                              max_tokens=models["fall_back"]["max_message"],
+                                              top_p=models["fall_back"]["top_p"],
+                                              frequency_penalty=models["fall_back"]["frequency_penalty"],
+                                              presence_penalty=models["fall_back"]["presence_penalty"])
     output = response.choices[0].message.content
     pattern = r'^On\s([A-Z][a-z]+,\s[A-Z][a-z]+\s\d{1,2},\s\d{4}\s(?:at\s)?\d{1,2}:\d{2}\s(?:AM|PM)?:)\s'
     match = re.search(pattern, input_list[-1]['content'])
@@ -112,7 +115,7 @@ def openai_embedder(query):
     :rtype: list
     """
     return client.embeddings.create(input=query,
-    model="text-embedding-ada-002").data[0].embedding
+                                    model="text-embedding-ada-002").data[0].embedding
 
 
 system = "You are FIXED_USER_INJECTION AI Voice Assistant named Jarvis. Keep in mind that voice assistants should not" \
@@ -134,7 +137,7 @@ system = "You are FIXED_USER_INJECTION AI Voice Assistant named Jarvis. Keep in 
          "memory purposes and to provide accurate responses, but refrain from repeating the date and time explicitly " \
          "in the conversation. \n\n The current date time as of the moment you received your most " \
          "recent message has been injected into your memory here: DATETIME_INJECTION. LONG_TERM_MEMORY_INJECTION" + \
-         get_system_appendix()
+         get_system_appendix() + "\n\n" + get_speaker_system_appendix()
 
 # user documents directory
 db_path = os.path.join(os.path.expanduser('~'), 'Documents', "Jarvis DB")
@@ -202,7 +205,7 @@ def background_refresh_assistant():
     try:
         refresh_assistant()
     except Exception as e:
-        logger.exception("Error reducing history in background:"+" "+str( e))
+        logger.exception("Error reducing history in background:"+" "+str(e))
 
 
 def generate_simple_response(history):
@@ -217,24 +220,24 @@ def generate_simple_response(history):
     model = get_model()
     try:
         response = client.chat.completions.create(model=model["name"],
-        messages=history,
-        temperature=model["temperature"],
-        max_tokens=model["max_message"],
-        top_p=model["top_p"],
-        frequency_penalty=model["frequency_penalty"],
-        presence_penalty=model["presence_penalty"],
-        tools=tools_list)
+                                                  messages=history,
+                                                  temperature=model["temperature"],
+                                                  max_tokens=model["max_message"],
+                                                  top_p=model["top_p"],
+                                                  frequency_penalty=model["frequency_penalty"],
+                                                  presence_penalty=model["presence_penalty"],
+                                                  tools=tools_list)
     except openai.RateLimitError:
         log_model(model["name"])
         model = get_model(error=True)
         response = client.chat.completions.create(model=model["name"],
-        messages=history,
-        temperature=model["temperature"],
-        max_tokens=model["max_message"],
-        top_p=model["top_p"],
-        frequency_penalty=model["frequency_penalty"],
-        presence_penalty=model["presence_penalty"],
-        tools=tools_list)
+                                                  messages=history,
+                                                  temperature=model["temperature"],
+                                                  max_tokens=model["max_message"],
+                                                  top_p=model["top_p"],
+                                                  frequency_penalty=model["frequency_penalty"],
+                                                  presence_penalty=model["presence_penalty"],
+                                                  tools=tools_list)
 
     output = response.choices[0].message.content
     reason = response.choices[0].finish_reason
@@ -328,26 +331,26 @@ def use_tool(tool_call):
         called_function = function_info[function_name]['function']
     except KeyError:
         missing_function = True
-        logger.error("KeyError:"+" "+str( function_name))
+        logger.error("KeyError:"+" "+str(function_name))
         errors.append({"content": "ERROR", "role": "function",
-                            "name": function_name})
+                       "name": function_name})
         errors.append({"content": "Only use a valid function in your "
-                                       "function list.", "role": "system"})
+                                  "function list.", "role": "system"})
     if not missing_function:
         try:
             arguments = json.loads(tool_call['arguments'])
             try:
                 result = called_function(**arguments)
                 results.append({"content": str(result), "role": "function",
-                                    "name": function_name})
+                                "name": function_name})
             except Exception as e:
                 errors.append({"content": "ERROR", "role": "function",
-                                    "name": function_name})
+                               "name": function_name})
                 errors.append({"content": "Error calling "
-                                               "" + function_name +
-                                               " function with passed arguments " +
-                                               "" + str(arguments) + " : " + str(e),
-                                    "role": "system"})
+                                          "" + function_name +
+                                          " function with passed arguments " +
+                                          "" + str(arguments) + " : " + str(e),
+                               "role": "system"})
         except json.decoder.JSONDecodeError:
             required_arguments = function_info[function_name]['schema']['function']['parameters']['required']
             if tool_call['arguments'] == "":

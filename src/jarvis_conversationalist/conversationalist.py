@@ -1,6 +1,5 @@
 import multiprocessing
 import queue
-import sys
 import threading
 import time
 import os
@@ -99,17 +98,18 @@ def converse(memory, interrupt_event, start_event, stop_event):
     :return:
     """
     audio_queue = multiprocessing.Queue()
-    text_queue = queue.Queue()
+    text_queue = multiprocessing.Queue()
     multiprocessing_stop_event = multiprocessing.Event()
 
     speaking = multiprocessing.Event()
     capture_process = multiprocessing.Process(target=audio_capture_process,
                                               args=(audio_queue, speaking, multiprocessing_stop_event), )
-    processing_thread = threading.Thread(target=audio_processing_thread,
-                                          args=(audio_queue, text_queue, speaking, stop_event))
+    text_process = multiprocessing.Process(target=audio_processing_thread,
+                                                args=(audio_queue, text_queue, speaking,
+                                                      multiprocessing_stop_event))
 
     capture_process.start()
-    processing_thread.start()
+    text_process.start()
 
     # Rolling buffer to store text
     transcript = []
@@ -119,8 +119,11 @@ def converse(memory, interrupt_event, start_event, stop_event):
     while text_queue.empty():
         threading.Event().wait(1)
     logger.info("Starting...")
-    while text_queue.empty() is False:
-        text_queue.get()
+    while not text_queue.empty() and not stop_event.is_set():
+        try:
+            text_queue.get(timeout=5)
+        except multiprocessing.queues.Empty:
+            pass
     play_audio_file(core_path + "/tone_one.wav", blocking=False)
     start_event.set()
     last_response_time = None
@@ -238,8 +241,8 @@ def converse(memory, interrupt_event, start_event, stop_event):
     audio_queue.put((None, time.time()))
     audio_queue.put((None, time.time()))
     audio_queue.put((None, time.time()))
-    processing_thread.join(timeout=20)
     capture_process.join(timeout=20)
+    text_process.join(timeout=20)
 
 
 if __name__ == "__main__":

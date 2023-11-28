@@ -45,11 +45,11 @@ def check_for_directed_at_me(transcript, n=1):
                      " to " + name + " directly."
 
     response = client.chat.completions.create(model="gpt-3.5-turbo",
-        messages=[{"role": "system", "content": system_message},
-                  {"role": "user", "content": "\n".join(transcript)}],
-        functions=functions,
-        n=n,
-        function_call={"name": "configure_response"})
+                                              messages=[{"role": "system", "content": system_message},
+                                                        {"role": "user", "content": "\n".join(transcript)}],
+                                              functions=functions,
+                                              n=n,
+                                              function_call={"name": "configure_response"})
     probabilities = []
     for result in response.choices:
         result = result.message.function_call
@@ -98,11 +98,11 @@ def check_for_completion(transcript, n=1):
     " if the user is done speaking by analyzing the text below and seeing if the user has completed their thought."
 
     response = client.chat.completions.create(model="gpt-4",
-    messages=[{"role": "system", "content": system_message},
-              {"role": "user", "content": "\n".join(transcript)}],
-    functions=functions,
-    n=n,
-    function_call={"name": "configure_response"})
+                                              messages=[{"role": "system", "content": system_message},
+                                                        {"role": "user", "content": "\n".join(transcript)}],
+                                              functions=functions,
+                                              n=n,
+                                              function_call={"name": "configure_response"})
     probabilities = []
     for result in response.choices:
         result = result.message.function_call
@@ -130,7 +130,7 @@ def extract_query(transcript):
                         "description": "The query that the user is asking. For example, if the user says 'What is the "
                                        "weather like today "+name+"?', the query should be "
                                        "'What is the weather like today, "+name+"?'. Or if the user says '"+name+", "
-                                        "please turn on the lights', the query should be "
+                                       "please turn on the lights', the query should be "
                                        "'"+name+", Please turn on the lights'."
                     }
                 },
@@ -138,19 +138,30 @@ def extract_query(transcript):
             },
         }
     ]
-    system_message = "You are seeing a live transcription of what is being said in a room. It is your job to determine"
-    " the query that the user is asking by analyzing the text below and extracting word for word the section of the "
-    " transcript that is the query and ignoring the rest of the transcript. There may be multiple people in the room "
-    " or people on the phone. It is your job to determine which part of the transcript is the query meant "
-    " for " + name + ". The query should be a question or a command or a statement directed at " + name + "."
-    " It is ok if there are multiple parts of the query. Just make sure to exclude the parts of the transcript that "
-    " are not the query."
+    system_message = "You are seeing a live transcription of what is being said in a room. It is your job to " \
+                     "determine the query that the user is asking by analyzing the text below and extracting word " \
+                     "for word the section of the transcript that is the query, include who is asking it using " \
+                     "the bracket format like '[Unknown Speaker X]: ' or '[Jane]: ' or '[John Doe]: ' etc. " \
+                     "Ignore the rest of the unrelated transcript. Keep in mind that sometimes context from " \
+                     "earlier parts of the conversation are critical to understanding a query - make sure to include" \
+                     "all the context needed to complete the query well. " \
+                     "There may be multiple people in the room or people " \
+                     "on the phone. It is your job to determine which part of the transcript is the query meant " \
+                     "for " + name + ". The query should be a question or a command or a statement directed at or" \
+                                     "highly related to " + name + ".  It is ok if there are multiple parts of the " \
+                                                                   "query, or if multiple people appear to be asking " \
+                                                                   "questions to" + name + ", it is ok to include " \
+                                                                                           "all of those subsections " \
+                                                                                           "in the query - just make " \
+                                                                                           "sure to include the " \
+                                                                                           "speaker annotation for " \
+                                                                                           "each subsection."
 
     response = client.chat.completions.create(model="gpt-4",
-    messages=[{"role": "system", "content": system_message},
-              {"role": "user", "content": "\n".join(transcript)}],
-    functions=functions,
-    function_call={"name": "configure_response"})
+                                              messages=[{"role": "system", "content": system_message},
+                                                        {"role": "user", "content": "\n".join(transcript)}],
+                                              functions=functions,
+                                              function_call={"name": "configure_response"})
     result = response.choices[0].message.function_call
     if result:
         return json.loads(result.arguments)["query"]
@@ -161,5 +172,5 @@ def simple_stream_response(query, context=None):
     if context is None:
         context = []
     return client.chat.completions.create(model="gpt-4",
-    messages=context+[{"role": "user", "content": query}],
-    stream=True)
+                                          messages=context+[{"role": "user", "content": query}],
+                                          stream=True)
