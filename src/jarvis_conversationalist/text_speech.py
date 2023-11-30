@@ -227,9 +227,10 @@ def text_to_speech(text: str, model="gpt-4", stream=False):
             pitch = "40"
         text_cmd = fixed_text
         output_file = os.path.join(audio_folder, str(uuid.uuid4()) + ".wav")
-        result = subprocess.run(['mimic3', text_cmd, ">", output_file],
+        print(['mimic3', text_cmd, ">", output_file])
+        result = subprocess.run(f"mimic3 \"{text_cmd}\" > '{output_file}'",
                                 capture_output=True,
-                                env=env)
+                                env=env, shell=True)
         if not stream:
             return output_file
         if result.returncode != 0:

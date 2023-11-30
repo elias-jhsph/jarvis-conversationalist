@@ -5,6 +5,8 @@ from io import BytesIO
 
 warnings.filterwarnings("ignore", message=".*audio._backend.set_audio_backend.*")
 
+from torch import device
+from torch.cuda import is_available
 from pyannote.audio import Pipeline
 from .audio_vectordb import LocalAudioDB
 
@@ -56,6 +58,10 @@ class SpeakerIdentifier:
         self.pipeline = Pipeline.from_pretrained("pyannote/speaker-diarization-3.1",
                                                  use_auth_token="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"
                                                  )
+
+    def speedup_if_able(self):
+        if is_available():
+            self.pipeline.to(device("cuda"))
 
     def get_next_unknown_speaker_id(self):
         """

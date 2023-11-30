@@ -1,13 +1,13 @@
+import multiprocessing
 import os
 import whisper
 from torch.cuda import is_available
-import time
 from io import BytesIO
 from soundfile import read
 from numpy import float32
 import warnings
 
-from .audio_identifier import SpeakerIdentifier
+from .speaker_recognition import recognition_process
 from .logger_config import get_log_folder_path, get_logger
 logger = get_logger()
 
@@ -21,13 +21,10 @@ if not os.path.exists(dir_path):
     os.mkdir(dir_path)
 
 if is_available():
-    model = whisper.load_model("base.en", download_root=dir_path)
-    logger.info("Using GPU!")
+    model = None
+    logger.info("Using GPU! (if using just module need to initialize module where you want it)")
 else:
     model = whisper.load_model("base.en", download_root=dir_path)
-
-speaker_pipeline = SpeakerIdentifier(persist_directory=dir_root)
-speaker_pipeline=None
 
 
 def convert_to_text(audio: BytesIO, text_only=False) -> str or list:
@@ -96,15 +93,32 @@ def audio_processing_thread(audio_queue, text_queue, speaking, stop_event):
     :return:
     """
     try:
+        recog_audio_queue = multiprocessing.Queue()
+        speakers_queue = multiprocessing.Queue()
+        recog_process = multiprocessing.Process(target=recognition_process,
+                                               args=(recog_audio_queue, speakers_queue, speaking,
+                                                     stop_event), )
+
+        recog_process.start()
+        if is_available():
+            global model
+            model = whisper.load_model("base.en", download_root=dir_path)
         while stop_event.is_set() is False:
             audio_data, ts = audio_queue.get()
             if not speaking.is_set() and audio_data is not None:
-                print(audio_data is not None)
+                while not recog_audio_queue.empty():
+                    recog_audio_queue.get()
+                while not speakers_queue.empty():
+                    speakers_queue.get()
+                recog_audio_queue.put(audio_data)
                 text = convert_to_text(audio_data)
-                timestamp = time.time()
                 if not speaking.is_set() and audio_data is not None:
-                    #speakers = speaker_pipeline.get_speakers(audio_data)
-                    #text = fuse_text_and_speakers(text, speakers)
+                    try:
+                        speakers = speakers_queue.get(timeout=5)
+                        text = fuse_text_and_speakers(text, speakers)
+                    except multiprocessing.queues.Empty:
+                        text = text['text']
+
                     if not speaking.is_set():
                         text_queue.put((text, ts))
             if audio_data is None:

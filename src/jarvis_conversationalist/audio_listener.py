@@ -8,7 +8,7 @@ from .logger_config import get_logger
 logger = get_logger()
 
 
-def prep_mic(duration: float = 1.0) -> int:
+def prep_mic(duration: float = 2.0) -> int:
     """
     Prepare the microphone for listening by adjusting it for ambient noise.
     :param duration: The duration to adjust the microphone for.
@@ -53,6 +53,8 @@ def listen_to_user(energy, silence_threshold=.5, maximum_seconds=120) -> BytesIO
     sample_rate = 16000
     frames_per_buffer = 4096
     seconds_per_buffer = frames_per_buffer / sample_rate
+    energy_factor = 1.2
+    energy = energy*energy_factor
     with sd.InputStream(samplerate=sample_rate, channels=1, dtype='int16') as stream:
 
         audio_data = None
