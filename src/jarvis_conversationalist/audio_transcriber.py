@@ -1,15 +1,14 @@
 import os
-import sys
 import whisper
 from torch.cuda import is_available
 import time
 from io import BytesIO
 from soundfile import read
-from numpy import float16, float32
+from numpy import float32
 import warnings
 
-#from .audio_identifier import SpeakerIdentifier
-from logger_config import get_log_folder_path, get_logger
+from .audio_identifier import SpeakerIdentifier
+from .logger_config import get_log_folder_path, get_logger
 logger = get_logger()
 
 
@@ -27,8 +26,9 @@ if is_available():
 else:
     model = whisper.load_model("base.en", download_root=dir_path)
 
-#speaker_pipeline = SpeakerIdentifier(persist_directory=dir_root)
+speaker_pipeline = SpeakerIdentifier(persist_directory=dir_root)
 speaker_pipeline=None
+
 
 def convert_to_text(audio: BytesIO, text_only=False) -> str or list:
     """
@@ -42,29 +42,10 @@ def convert_to_text(audio: BytesIO, text_only=False) -> str or list:
     :rtype: str or list
     """
     # Read audio data
+    audio.seek(0)
     array_audio, sampling_rate = read(audio)
-    print("Audio data read. Sampling rate:", sampling_rate)
-    print("Initial array shape:", array_audio.shape)
-    print("Initial array dtype:", array_audio.dtype)
-
-    # Check for GPU availability and set data type accordingly
-    if is_available():
-        array_audio = array_audio.astype(float16)
-        print("Using GPU. Converted array to float16.")
-    else:
-        array_audio = array_audio.astype(float16)
-        print("Using CPU. Converted array to float16.")
-
-    # Print memory usage after conversion
-    print("Array size after conversion:", sys.getsizeof(array_audio), "bytes")
-
-    # Transcribe audio
-    if is_available():
-        result = model.transcribe(array_audio)
-        print("Transcription completed on GPU.")
-    else:
-        result = model.transcribe(array_audio)
-        print("Transcription completed on CPU.")
+    array_audio = array_audio.astype(float32)
+    result = model.transcribe(array_audio)
 
     # Return the result
     if text_only:

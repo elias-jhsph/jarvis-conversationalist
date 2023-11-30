@@ -1,7 +1,7 @@
 import wave
 import time
 from io import BytesIO
-from numpy import frombuffer, int16, average, isnan
+from numpy import frombuffer, int16, average, isnan, concatenate
 
 from .logger_config import get_logger
 
@@ -22,7 +22,7 @@ def prep_mic(duration: float = 1.0) -> int:
     total_volume = 0
     count = 0
 
-    with sd.InputStream(samplerate=sample_rate, channels=2, dtype='int16') as stream:
+    with sd.InputStream(samplerate=sample_rate, channels=1, dtype='int16') as stream:
         stream.start()
         while elapsed_time < duration:
             chunk, overflowed = stream.read(frames_per_buffer)
@@ -55,7 +55,7 @@ def listen_to_user(energy, silence_threshold=.5, maximum_seconds=120) -> BytesIO
     seconds_per_buffer = frames_per_buffer / sample_rate
     with sd.InputStream(samplerate=sample_rate, channels=1, dtype='int16') as stream:
 
-        audio_data = b''
+        audio_data = None
         window_size = round(silence_threshold * 2 / seconds_per_buffer)
         volume_buffer = []
         silence_duration = 0
@@ -67,12 +67,14 @@ def listen_to_user(energy, silence_threshold=.5, maximum_seconds=120) -> BytesIO
             chunk, overflowed = stream.read(frames_per_buffer)
             if overflowed:
                 logger.warning("Input overflow detected")
-            chunk = chunk.astype(int16).tobytes()
-            audio_data += chunk
+            chunk = chunk.astype(int16)
+            if audio_data is None:
+                audio_data = chunk.flatten()
+            else:
+                audio_data = concatenate((audio_data, chunk.flatten()))
 
             # Calculate the volume of the audio data in the chunk
-            volume = frombuffer(chunk, dtype=int16)
-            volume_buffer.append(average(abs(volume)))
+            volume_buffer.append(average(abs(chunk)))
 
             # Keep track of the average volume over the last window_size chunks
             if len(volume_buffer) > window_size:
@@ -94,20 +96,14 @@ def listen_to_user(energy, silence_threshold=.5, maximum_seconds=120) -> BytesIO
             return None
 
         # Create an AudioData object from the recorded audio data
-        wave_file_data = BytesIO()
-        # generate the WAV file contents
-        wav_writer = wave.open(wave_file_data, "wb")
-        try:  # note that we can't use context manager, since that was only added in Python 3.4
-            wav_writer.setframerate(sample_rate)
-            wav_writer.setsampwidth(2)
-            wav_writer.setnchannels(2)
-            wav_writer.writeframes(audio_data)
-            wave_file_data.seek(0)
-        except Exception as e:
-            # make sure resources are cleaned up
-            logger.error(e)
-            wav_writer.close()
-    return wave_file_data
+        audio_bytes_wave = BytesIO()
+        with wave.open(audio_bytes_wave, 'wb') as wf:
+            wf.setnchannels(1)
+            wf.setsampwidth(2)  # 2 bytes per sample since dtype='int16'
+            wf.setframerate(sample_rate)
+            wf.writeframes(audio_data)
+
+        return audio_bytes_wave
 
 
 def audio_capture_process(audio_queue, speaking, stop_event):
