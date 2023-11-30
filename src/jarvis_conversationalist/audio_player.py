@@ -1,18 +1,8 @@
-import atexit
-import pyaudio
 import os
 import time
 import threading
 import wave
-import struct
-
 from numpy import linspace, int16, sqrt, maximum, mean, square, frombuffer
-
-from .logger_config import get_logger
-logger = get_logger()
-
-pa = pyaudio.PyAudio()
-audio_stream = None
 
 
 def play_audio_file(file_path, blocking: bool = True, loops=1, delay: float = 0, destroy=False,
@@ -66,9 +56,7 @@ def _play_audio_file_blocking(file_path: str, stop_event: threading.Event, loops
     :param added_stop_event: an event to signal stopping the playback
     :type added_stop_event: threading.Event
     """
-    global pa
-    global audio_stream
-    stream = None
+    import sounddevice as sd
     if isinstance(file_path, list):
         files_updated = []
         for file in file_path:
@@ -85,41 +73,28 @@ def _play_audio_file_blocking(file_path: str, stop_event: threading.Event, loops
                 _play_audio_file_blocking(file, stop_event, loops, delay, destroy, added_stop_event)
         return
     else:
-        chunk = 8196
-        if audio_stream is not None:
-            logger.info("Audio stream already exists, closing it...")
-            stop_audio_stream()
-        added_stop = False
-        if added_stop_event is not None:
-            if added_stop_event.is_set():
-                added_stop = True
-        if not stop_event.is_set() and not added_stop:
-            time.sleep(delay)
-            for loop in range(loops):
-                with wave.open(file_path, 'rb') as wf:
-                    stream = pa.open(format=pa.get_format_from_width(wf.getsampwidth()),
-                                     channels=wf.getnchannels(),
-                                     rate=wf.getframerate(),
-                                     output=True,
-                                     frames_per_buffer=chunk)
+        chunk = 8192
+        if isinstance(loops, list):
+            loops = loops[0]  # Assumption: If loops is a list, take the first value
 
+        # Wait for the specified delay
+        time.sleep(delay)
+
+        # Play the audio file
+        for loop in range(loops):
+            with wave.open(file_path, 'rb') as wf:
+                stream = sd.OutputStream(samplerate=wf.getframerate(), channels=wf.getnchannels(), dtype=int16)
+                stream.start()
+                data = wf.readframes(chunk)
+                while data:
+                    # Check for stop conditions
+                    if stop_event.is_set() or (added_stop_event and added_stop_event.is_set()):
+                        break
+                    stream.write(frombuffer(data, dtype=int16))
                     data = wf.readframes(chunk)
-                    while data:
-                        if added_stop_event is not None:
-                            if added_stop_event.is_set():
-                                added_stop = True
-                        if not stop_event.is_set() and not added_stop:
-                            stream.write(data)
-                            data = wf.readframes(chunk)
-                        else:
-                            data = fade_out(data, 400)  # Adjust fade_duration for a very short fade-out
-                            stream.write(data)
-                            break
-        if stream is not None:
-            try:
-                stream.stop_stream()
-            finally:
-                stream.close()
+                stream.stop()
+
+        # Destroy the file if needed
         if destroy:
             os.remove(file_path)
 
@@ -154,63 +129,3 @@ def fade_out(data: bytes, fade_duration: int, rms_threshold: int = 1000) -> byte
     fade = linspace(1, 0, num_samples - start_fade).astype(int16)  # Convert fade array to int16
     audio_data[start_fade:] *= fade
     return audio_data.tobytes()
-
-
-def start_audio_stream(rate: int, length: int) -> None:
-    """
-    Start the audio stream.
-
-    :param rate: the sampling rate of the audio stream
-    :type rate: int
-    :param length: the length of the audio stream in frames per buffer
-    :type length: int
-    """
-    global audio_stream
-    audio_stream = pa.open(rate=rate, channels=1, format=pyaudio.paInt16, input=True,
-                           frames_per_buffer=length, input_device_index=None)
-
-
-def stop_audio_stream() -> None:
-    """
-    Stop the audio stream.
-    """
-    global audio_stream
-    if audio_stream is not None:
-        try:
-            audio_stream.stop_stream()
-            audio_stream.close()
-        except Exception as e:
-            logger.error(f"Failed to stop the audio stream: {e}")
-        finally:
-            audio_stream = None
-
-
-def get_next_audio_frame(handle):
-    """
-    Read the next frame from the audio stream.
-
-    :param handle: The Porcupine handle
-    :return: tuple, the unpacked PCM data
-    """
-    global audio_stream
-    try:
-        pcm = audio_stream.read(handle.frame_length, exception_on_overflow=False)
-    except pyaudio.PyAudioError as e:
-        logger.error(f"Input overflow error while reading from the audio stream: {e}")
-        return None
-
-    pcm = struct.unpack_from("h" * handle.frame_length, pcm)
-    return pcm
-
-
-def shutdown_audio() -> None:
-    """
-    Shutdown the audio stream and terminate the pyaudio instance.
-    """
-    global audio_stream
-    global pa
-    stop_audio_stream()
-    pa.terminate()
-
-
-atexit.register(shutdown_audio)

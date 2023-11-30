@@ -106,7 +106,7 @@ def converse(memory, interrupt_event, start_event, stop_event):
                                               args=(audio_queue, speaking, multiprocessing_stop_event), )
     text_process = multiprocessing.Process(target=audio_processing_thread,
                                                 args=(audio_queue, text_queue, speaking,
-                                                      multiprocessing_stop_event))
+                                                      multiprocessing_stop_event), )
 
     capture_process.start()
     text_process.start()

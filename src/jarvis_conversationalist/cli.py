@@ -58,7 +58,8 @@ def main():
         while True:
             if conversation_thread.is_alive():
                 if not start_event.is_set():
-                    print("\033[KI am booting...\033[K", end='\r')
+                    print("\033[KI am booting, be quiet - "
+                          "I'm sampling background noise levels in your space...\033[K", end='\r')
                     start_event.wait(timeout=1)
                 else:
                     user_input = input(hello)

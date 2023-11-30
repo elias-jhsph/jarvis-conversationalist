@@ -9,7 +9,6 @@ import spacy
 import atexit
 from queue import Queue
 from numpy import frombuffer, int16
-from pyaudio import PyAudio, paInt16
 from typing import Iterator, Dict, Tuple, Optional
 from .text_speech import text_to_speech, TextToSpeechError
 
@@ -24,7 +23,6 @@ except OSError:
 nlp.add_pipe("sentencizer")
 
 CHUNK = 8196
-FORMAT = paInt16
 CHANNELS = 1
 RATE = 16000
 
@@ -67,9 +65,6 @@ class SpeechStreamer:
         self.thread.daemon = True
         self.thread.start()
         atexit.register(self.stop)
-        self.stream = None
-        self.py_audio = PyAudio()
-        atexit.register(self.py_audio.terminate)
         self.stop_event = threading.Event()
         self.skip = skip
         self.audio_count = 0
@@ -91,30 +86,26 @@ class SpeechStreamer:
         :param skip: A threading.Event() to skip the current audio stream.
         :type skip: threading.Event(), optional
         """
+        import sounddevice as sd
         while True:
             generator, sample_rate = self.queue.get()
             if generator is None:
-                next
-            else:
-                if stop_other_audio:
-                    stop_other_audio.set()
+                continue
+
+            if stop_other_audio:
+                stop_other_audio.set()
 
             if not self.playing:
                 self.playing = True
-                if self.stream is None:
-                    self.stream = self.py_audio.open(format=paInt16,
-                                                     channels=CHANNELS,
-                                                     rate=sample_rate,
-                                                     output=True,
-                                                     frames_per_buffer=CHUNK)
+
             chunk_played = False
-            for chunk in generator:
-                if skip:
-                    if skip.is_set():
+            with sd.OutputStream(samplerate=sample_rate, channels=CHANNELS, dtype='int16') as stream:
+                for chunk in generator():
+                    if skip and skip.is_set():
                         self.stop()
                         return
-                self.stream.write(chunk)
-                chunk_played = True
+                    stream.write(chunk)
+                    chunk_played = True
 
             self.playing = False
 
@@ -160,10 +151,6 @@ class SpeechStreamer:
         else:
             while self.stop_event.is_set() is False and self.skip.is_set() is False:
                 self.skip.wait(timeout=1)
-        if self.stream:
-            self.stream.stop_stream()
-            self.stream.close()
-        self.py_audio.terminate()
 
     def _process_text_to_speech(self, text: str, delay: float, model: str, rt_text: queue.Queue) -> None:
         """
