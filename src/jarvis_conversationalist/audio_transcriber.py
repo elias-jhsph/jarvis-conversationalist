@@ -1,43 +1,16 @@
 import os
 import sys
-import importlib.resources as pkg_resources
-cuda_capable = False
-if sys.platform == "linux":
-    try:
-        cublas_path = str(pkg_resources.files('nvidia').joinpath('cublas', 'lib'))
-        cudnn_path = str(pkg_resources.files('nvidia').joinpath('cudnn', 'lib'))
-        if 'LD_LIBRARY_PATH' not in os.environ:
-            print(f"\nRun this to run Jarvis:\n"
-                  f"export LD_LIBRARY_PATH={cublas_path}:{cudnn_path}\n")
-        else:
-            if os.environ['LD_LIBRARY_PATH'].find(f"{cublas_path}:{cudnn_path}") < 0:
-                print(f"\nLD_LIBRARY_PATH needs addition of {cublas_path}:{cudnn_path}\n")
-            else:
-                cuda_capable = True
-    finally:
-        from torch.cuda import is_available
-        if cuda_capable and is_available():
-            from faster_whisper import WhisperModel, download_model
-            model_size = "large-v2"
-            # download_model("large-v2", dir_path)
-            model = WhisperModel(model_size, device="cuda", compute_type="float16")
-            import logging
-
-            logging.basicConfig()
-            logging.getLogger("faster_whisper").setLevel(logging.DEBUG)
-        else:
-            import whisper
-else:
-    import whisper
-
+import whisper
+from torch.cuda import is_available
 import time
 from io import BytesIO
 from soundfile import read
-from numpy import float16
+from numpy import float16, float32
 import warnings
 
-from .audio_identifier import SpeakerIdentifier
-from .logger_config import get_log_folder_path
+#from .audio_identifier import SpeakerIdentifier
+from logger_config import get_log_folder_path, get_logger
+logger = get_logger()
 
 
 warnings.filterwarnings("ignore", message="FP16 is not supported on CPU; using FP32 instead")
@@ -48,8 +21,14 @@ dir_path = os.path.join(dir_root, "whisper_models")
 if not os.path.exists(dir_path):
     os.mkdir(dir_path)
 
-speaker_pipeline = SpeakerIdentifier(persist_directory=dir_root)
+if is_available():
+    model = whisper.load_model("base.en", download_root=dir_path)
+    logger.info("Using GPU!")
+else:
+    model = whisper.load_model("base.en", download_root=dir_path)
 
+#speaker_pipeline = SpeakerIdentifier(persist_directory=dir_root)
+speaker_pipeline=None
 
 def convert_to_text(audio: BytesIO, text_only=False) -> str or list:
     """
@@ -62,21 +41,32 @@ def convert_to_text(audio: BytesIO, text_only=False) -> str or list:
     :return: str, the recognized text from the audio
     :rtype: str or list
     """
-    audio.seek(0)
-    if cuda_capable:
-        result = {"text": "", "segments": []}
-        segments, info = model.transcribe(audio, beam_size=5, language="en")
+    # Read audio data
+    array_audio, sampling_rate = read(audio)
+    print("Audio data read. Sampling rate:", sampling_rate)
+    print("Initial array shape:", array_audio.shape)
+    print("Initial array dtype:", array_audio.dtype)
 
-        for segment in segments:
-            print(segment)
-            new_seg = {'start': segment.start, 'end': segment.end, 'text': segment.text}
-            result['segments'].append(new_seg)
-            result['text'] += (" " + segment.text)
-    else:
-        array_audio, sampling_rate = read(audio)
+    # Check for GPU availability and set data type accordingly
+    if is_available():
         array_audio = array_audio.astype(float16)
-        result = model.transcribe(array_audio)
+        print("Using GPU. Converted array to float16.")
+    else:
+        array_audio = array_audio.astype(float16)
+        print("Using CPU. Converted array to float16.")
 
+    # Print memory usage after conversion
+    print("Array size after conversion:", sys.getsizeof(array_audio), "bytes")
+
+    # Transcribe audio
+    if is_available():
+        result = model.transcribe(array_audio)
+        print("Transcription completed on GPU.")
+    else:
+        result = model.transcribe(array_audio)
+        print("Transcription completed on CPU.")
+
+    # Return the result
     if text_only:
         return result["text"]
     else:
