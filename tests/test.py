@@ -10,15 +10,12 @@ if get_openai_key() is not None:
     os.environ["OPENAI_API_KEY"] = get_openai_key()
 from src.jarvis_conversationalist.logger_config import get_logger
 from src.jarvis_conversationalist.conversationalist import process_assistant_response, get_core_path, converse
-from src.jarvis_conversationalist.audio_player import play_audio_file, shutdown_audio
+from src.jarvis_conversationalist.audio_player import play_audio_file
 from src.jarvis_conversationalist.openai_functions.functions import get_function_info
 from src.jarvis_conversationalist.audio_listener import audio_capture_process, listen_to_user, prep_mic
 
 
 class TestJarvisConversationalist(unittest.TestCase):
-    @classmethod
-    def tearDownClass(cls):
-        shutdown_audio()
 
     def test_get_logger(self):
         # Define a test case

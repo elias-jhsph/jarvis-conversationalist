@@ -1,12 +1,16 @@
 import subprocess
 import sys
 import os
-from pydub import AudioSegment
 import uuid
 import io
 import re
-from gtts import gTTS
 
+if sys.platform != "darwin" and sys.platform != "linux":
+    from pydub import AudioSegment
+    from gtts import gTTS
+
+if not os.path.exists(os.path.join(os.path.expanduser("~"), "Jarvis Logs")):
+    os.mkdir(os.path.join(os.path.expanduser("~"), "Jarvis Logs"))
 audio_folder = os.path.join(os.path.expanduser("~"), "Jarvis Logs", "temp_audio")
 if not os.path.exists(audio_folder):
     os.mkdir(audio_folder)
@@ -20,6 +24,9 @@ if sys.platform == 'darwin':
         vflag = ['-v', 'Tom (Enhanced)']
     if out.stdout.decode("utf-8").find("Evan (Enhanced)") >= 0:
         vflag = ['-v', 'Evan (Enhanced)']
+if sys.platform == 'linux':
+    env = os.environ.copy()
+    env["PATH"] = sys.executable + os.pathsep + env["PATH"]
 
 
 class TextToSpeechError(Exception):
@@ -204,6 +211,27 @@ def text_to_speech(text: str, model="gpt-4", stream=False):
         output_file = os.path.join(audio_folder, str(uuid.uuid4()) + ".wav")
         result = subprocess.run(['say']+vflag+[text_cmd, "-o", output_file, '--data-format=LEI16@22050'],
                                 capture_output=True)
+        if not stream:
+            return output_file
+        if result.returncode != 0:
+            raise Exception("Say command error: " + result.stderr.decode("utf-8"))
+        with open(output_file, 'rb') as file:
+            file.seek(0)
+            byte_data = file.read()
+        os.remove(output_file)
+        return byte_data
+    if sys.platform == 'linux':
+        print(text)
+        fixed_text = text.replace('"', r'\"')
+        speed = ".85"
+        if slow_flag:
+            speed = "1"
+        text_cmd = fixed_text
+        output_file = os.path.join(audio_folder, str(uuid.uuid4()) + ".wav")
+        print(['mimic3', text_cmd, ">", output_file])
+        result = subprocess.run(f"mimic3 \"{text_cmd}\" --length-scale {speed} > '{output_file}'",
+                                capture_output=True,
+                                env=env, shell=True)
         if not stream:
             return output_file
         if result.returncode != 0:

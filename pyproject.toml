@@ -1,6 +1,6 @@
 [project]
 name = "jarvis_conversationalist"
-version = "0.3.2"
+version = "0.4.0"
 authors = [{name="Elias Weston-Farber", email="eweston4@jhu.edu"}]
 description = "A voice assistant for the command line"
 readme = "README.md"
@@ -9,10 +9,11 @@ classifiers = [
     "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
     "Operating System :: OS Independent",
 ]
-dependencies = ["openai-whisper==20231106","openai==1.2.3",
-    "chromadb<=0.4.15","soundfile==0.12.1","PyAudio==0.2.14","pydub==0.25.1",
+dependencies = ["torch>2.0.0", "openai==1.2.3", "openai-whisper",
+    "chromadb<=0.4.15","soundfile==0.12.1","sounddevice","pydub==0.25.1", "pyannote.audio==3.1.0", "faiss-cpu",
     "gtts==2.4.0","spacy==3.7.2","beautifulsoup4==4.12.2","googlesearch-python==1.2.3",
-    "tiktoken==0.5.1","geocoder==1.38.1","scrapy==2.11.0"]
+    "tiktoken==0.5.1","geocoder==1.38.1","scrapy==2.11.0", "mycroft-mimic3-tts[all]; sys_platform == 'linux'",
+"pysqlite3-binary; sys_platform == 'linux'"]
 [project.scripts]
 jarvis = "jarvis_conversationalist.__main__:main"
 [tool.setuptools.packages.find]

@@ -15,3 +15,6 @@ src/jarvis_conversationalist.egg-info/*
 src/jarvis_conversationalist.egg-info
 .idea/*
 .idea
+src/jarvis_conversationalist/*.wav
+build/*
+build

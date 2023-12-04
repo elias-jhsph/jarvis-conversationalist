@@ -13,17 +13,16 @@ Jarvis Conversationalist is a Python-based project that provides a conversationa
 
 This package is availible here [https://pypi.org/project/jarvis-conversationalist/](https://pypi.org/project/jarvis-conversationalist/)
 
-This project requires Python 3.11 or later. For mac, install portaudio, ffmpeg, and then pip install the package:
+This project requires Python 3.11 or later. This app currently works on Mac and Linux (which can cuda accelerate if able):
+
 
 ```bash
-brew install portaudio
-brew install ffmpeg
 pip install jarvis_conversationalist
 ```
 
 ## Usage
 
-To start the application, run the `cli.py` script from the command line:
+To start the application run this in your terminal after pip installing:
 
 ```bash
 jarvis
@@ -57,52 +56,7 @@ or just download this...
 
 Open the downloaded file and follow the installation instructions.  
   
-
-2\. Install Homebrew (if you don't have it installed already):
-
-In Terminal, type:
-
-```bash
-brew install portaudio
-brew install ffmpeg
-```
-
-Then press Enter.
-
-If that doesn't work then you need to install homebrew (you may also want to brew install ffmpeg).
-
-Homebrew is a package manager for Mac that simplifies the installation of software.  
-Open the Terminal app on your Mac (you can find it in Applications > Utilities).  
-Copy and paste the following command into Terminal and press Enter:
-```bash
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-```
-Follow the on-screen instructions to complete the installation. 
-Make sure to add Homebrew to your PATH environment variables.
-You may need to create a bash or zsh profile if you don't have one already.
-Google how to do that if you don't know how.
-Then make sure to copy the line that the installer gives you and paste it into your bash or zsh profile.
-Then save the file and restart your terminal.
-Then type brew in your terminal and press enter.
-  
-
-3\. Install Portaudio
-Portaudio is needed for the audio functionalities of Jarvis.  
-In Terminal, type:
-
-```bash
-brew install portaudio
-```
-
-Then press Enter.
-Install ffmpeg the same way
-
-```bash
-brew install ffmpeg
-```
-
-  
-4\. Install Jarvis Conversationalist:  
+2\. Install Jarvis Conversationalist:  
 In Terminal, type:
 
 ```bash
@@ -112,18 +66,18 @@ pip3.11 install jarvis_conversational
 Then press Enter.  
 Wait for the installation to complete.
   
-5\. Finding Your OpenAI API Key - Create Open an OpenAI Account:  
+3\. Finding Your OpenAI API Key - Create Open an OpenAI Account:  
 Visit OpenAI's website and sign up or log in. After logging in, navigate to the API section.
 [https://platform.openai.com/api-keys](https://platform.openai.com/api-keys)
 
 
-6\. Generate an API Key:  
+4\. Generate an API Key:  
 In the API section, you should see an option to create a new API key.  
 Follow the instructions to generate a new key.  
 Once generated, make sure to copy and save your API key in a secure place.  
 Using Jarvis Conversationalist  
 
-7\. Start the Application:  
+5\. Start the Application:  
   
 To set your OpenAI API username and key, use:  
 ```bash
@@ -138,7 +92,7 @@ jarvis
 
 Then press Enter, to use Jarvis!  
 
-8\. Updating Jarvis Conversationalist:
+6\. Updating Jarvis Conversationalist:
 
 To update Jarvis Conversationalist, use:  
 ```bash
