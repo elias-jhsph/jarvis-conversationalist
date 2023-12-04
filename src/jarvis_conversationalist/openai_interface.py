@@ -144,7 +144,7 @@ db_path = os.path.join(os.path.expanduser('~'), 'Documents', "Jarvis DB")
 
 # Load Assistant History
 history_access = AssistantHistory(get_user(), system, tokenizer, summarizer, models["primary"]["max_history"],
-                                  models["fall_back"]["max_history"], embedder=openai_embedder,
+                                  models["fall_back"]["max_history"],
                                   persist_directory=db_path)
 
 

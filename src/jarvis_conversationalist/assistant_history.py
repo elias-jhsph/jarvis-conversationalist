@@ -319,17 +319,24 @@ class AssistantHistory:
             documents.append(context[i]['content'])
 
         metadata = copy.deepcopy(context)
-        ebeddings = []
-        for i in range(len(metadata)):
-            ebeddings.append(self.embedder(metadata[i]['content']))
-            del metadata[i]['content']
+        if self.embedder:
+            ebeddings = []
+            for i in range(len(metadata)):
+                ebeddings.append(self.embedder(metadata[i]['content']))
+                del metadata[i]['content']
 
-        self.history.add(
-            embeddings=ebeddings,
-            metadatas=metadata,
-            documents=documents,
-            ids=ids,
-        )
+            self.history.add(
+                embeddings=ebeddings,
+                metadatas=metadata,
+                documents=documents,
+                ids=ids,
+            )
+        else:
+            self.history.add(
+                metadatas=metadata,
+                documents=documents,
+                ids=ids,
+            )
         self.resolve_id(seed)
         self.to_summarize + context
 
@@ -372,12 +379,19 @@ class AssistantHistory:
                                     "utc_time": batch_entries[0]['utc_time'],
                                     "num_tokens": self.count_tokens_text(new_summary['content'])}
             seed = str(uuid.uuid4())
-            self.summaries.add(
-                embeddings=[self.embedder(new_summary['content'])],
-                metadatas=[new_summary_metadata.copy()],
-                documents=[new_summary['content']],
-                ids=[self.create_id(seed, summary=True)],
-            )
+            if self.embedder:
+                self.summaries.add(
+                    embeddings=[self.embedder(new_summary['content'])],
+                    metadatas=[new_summary_metadata.copy()],
+                    documents=[new_summary['content']],
+                    ids=[self.create_id(seed, summary=True)],
+                )
+            else:
+                self.summaries.add(
+                    metadatas=[new_summary_metadata.copy()],
+                    documents=[new_summary['content']],
+                    ids=[self.create_id(seed, summary=True)],
+                )
             self.resolve_id(seed, summary=True)
             time.sleep(0.1)
         self.update_ltm()
@@ -459,51 +473,60 @@ class AssistantHistory:
                 query_size = query_n_max
                 if query_size > current_id:
                     query_size = current_id
-                query_results = self.history.query(query_embeddings=[self.embedder(query)], n_results=query_size)
-                for tid in query_results["ids"][0][:query_size]:
-                    if tid not in id_added:
-                        result_pos = query_results["ids"][0].index(tid)
-                        entry = query_results["metadatas"][0][result_pos]
-                        if token_count + entry["num_tokens"] > max_tokens:
-                            break
-                        if distance_cut_off is not None:
-                            if query_results["distances"][0][result_pos] < distance_cut_off:
-                                break
-                        batch_data = self.get_batches(entry["batch_id"])
-                        batch_data.reverse()
-                        for item in batch_data:
-                            if token_count + item["num_tokens"] > max_tokens:
-                                break
-                            if item['id'] not in id_added:
-                                context_list.insert(0, item)
-                                token_count += item["num_tokens"]
-                                id_added.append(item['id'])
-                                info["history_query"]["ids"].append(item['id'])
-                                info["history_query"]["num_tokens"] += item["num_tokens"]
-
-                # If the context is still too short, query the summaries
-                if token_count < max_tokens:
-                    query_size = query_n_max
-                    current_summary_id = int(self.get_current_id(summary=True))
-                    if query_size > current_summary_id:
-                        query_size = current_summary_id
-                    query_summaries = self.summaries.query(query_embeddings=[self.embedder(query)], n_results=query_size)
-                    for tid in query_summaries["ids"][0]:
-                        if tid not in summary_ids:
-                            result_pos = query_summaries["ids"][0].index(tid)
-                            entry = query_summaries["metadatas"][0][result_pos]
+                if query_size > 0:
+                    if self.embedder:
+                        query_results = self.history.query(query_embeddings=[self.embedder(query)], n_results=query_size)
+                    else:
+                        query_results = self.history.query(query_texts=[query], n_results=query_size)
+                    for tid in query_results["ids"][0][:query_size]:
+                        if tid not in id_added:
+                            result_pos = query_results["ids"][0].index(tid)
+                            entry = query_results["metadatas"][0][result_pos]
                             if token_count + entry["num_tokens"] > max_tokens:
                                 break
                             if distance_cut_off is not None:
-                                if query_summaries["distances"][0][result_pos] < distance_cut_off:
+                                if query_results["distances"][0][result_pos] < distance_cut_off:
                                     break
-                            if not (entry["source_ids"].split(",")[0] in id_added and
-                                    entry["source_ids"].split(",")[1] in id_added):
-                                entry["content"] = query_summaries["documents"][0][result_pos]
-                                summary_ids.append(tid)
-                                context_list.insert(0, entry)
-                                token_count += entry["num_tokens"]
-                                info["summaries_queries"]["ids"].append(tid)
+                            batch_data = self.get_batches(entry["batch_id"])
+                            batch_data.reverse()
+                            for item in batch_data:
+                                if token_count + item["num_tokens"] > max_tokens:
+                                    break
+                                if item['id'] not in id_added:
+                                    context_list.insert(0, item)
+                                    token_count += item["num_tokens"]
+                                    id_added.append(item['id'])
+                                    info["history_query"]["ids"].append(item['id'])
+                                    info["history_query"]["num_tokens"] += item["num_tokens"]
+
+                    # If the context is still too short, query the summaries
+                    if token_count < max_tokens:
+                        query_size = query_n_max
+                        current_summary_id = int(self.get_current_id(summary=True))
+                        if query_size > current_summary_id:
+                            query_size = current_summary_id
+                        if query_size > 0:
+                            if self.embedder:
+                                query_summaries = self.summaries.query(query_embeddings=[self.embedder(query)],
+                                                                       n_results=query_size)
+                            else:
+                                query_summaries = self.summaries.query(query_texts=[query], n_results=query_size)
+                            for tid in query_summaries["ids"][0]:
+                                if tid not in summary_ids:
+                                    result_pos = query_summaries["ids"][0].index(tid)
+                                    entry = query_summaries["metadatas"][0][result_pos]
+                                    if token_count + entry["num_tokens"] > max_tokens:
+                                        break
+                                    if distance_cut_off is not None:
+                                        if query_summaries["distances"][0][result_pos] < distance_cut_off:
+                                            break
+                                    if not (entry["source_ids"].split(",")[0] in id_added and
+                                            entry["source_ids"].split(",")[1] in id_added):
+                                        entry["content"] = query_summaries["documents"][0][result_pos]
+                                        summary_ids.append(tid)
+                                        context_list.insert(0, entry)
+                                        token_count += entry["num_tokens"]
+                                        info["summaries_queries"]["ids"].append(tid)
 
 
             else:

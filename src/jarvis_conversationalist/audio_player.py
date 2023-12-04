@@ -1,7 +1,7 @@
 import os
 import time
 import threading
-import wave
+import soundfile as sf
 from numpy import linspace, int16, sqrt, maximum, mean, square, frombuffer
 
 
@@ -56,7 +56,6 @@ def _play_audio_file_blocking(file_path: str, stop_event: threading.Event, loops
     :param added_stop_event: an event to signal stopping the playback
     :type added_stop_event: threading.Event
     """
-    import sounddevice as sd
     if isinstance(file_path, list):
         files_updated = []
         for file in file_path:
@@ -78,22 +77,25 @@ def _play_audio_file_blocking(file_path: str, stop_event: threading.Event, loops
             loops = loops[0]  # Assumption: If loops is a list, take the first value
 
         # Wait for the specified delay
-        time.sleep(delay)
-
+        if added_stop_event:
+            added_stop_event.wait(timeout=delay)
+        else:
+            stop_event.wait(timeout=delay)
+        import sounddevice as sd
         # Play the audio file
         for loop in range(loops):
-            with wave.open(file_path, 'rb') as wf:
-                stream = sd.OutputStream(samplerate=wf.getframerate(), channels=wf.getnchannels(), dtype=int16)
-                stream.start()
-                data = wf.readframes(chunk)
-                while data:
-                    # Check for stop conditions
+            if not stop_event.is_set() or (added_stop_event and not added_stop_event.is_set()):
+                data, fs = sf.read(file_path)
+                sd.play(data, fs)
+                while sd.get_stream().active:
                     if stop_event.is_set() or (added_stop_event and added_stop_event.is_set()):
+                        sd.stop()
                         break
-                    stream.write(frombuffer(data, dtype=int16))
-                    data = wf.readframes(chunk)
-                stream.stop()
-
+                    if added_stop_event:
+                        added_stop_event.wait(timeout=.02)
+                    else:
+                        stop_event.wait(timeout=.02)
+                sd.stop()
         # Destroy the file if needed
         if destroy:
             os.remove(file_path)

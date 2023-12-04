@@ -22,18 +22,20 @@ class LocalAudioDB:
         faiss_path = os.path.join(path, 'faiss_index.bin')
         lock_path = os.path.join(path, 'localaudiodb.lock')
         timestamp_path = os.path.join(path, 'localaudiodb_last_modified.txt')
+        self.timestamp_path = timestamp_path
+        if not os.path.exists(timestamp_path):
+            self.update_last_modified_time()
         self.db_path = db_path
         self.faiss_path = faiss_path
         self.lock_path = lock_path
-        self.timestamp_path = timestamp_path
         self.embedding_dim = embedding_dim
         self.conn = sqlite3.connect(db_path, check_same_thread=False)
         self.cursor = self.conn.cursor()
         self.initialize_db()
         self.index = faiss.IndexFlatL2(embedding_dim)
-        self.load_or_reload_index()
         self.last_update_time = self.get_last_modified_time()
         self.lock_file = None
+        self.load_or_reload_index()
 
     def initialize_db(self):
         self.cursor.execute('''CREATE TABLE IF NOT EXISTS embedding_index 
@@ -44,6 +46,7 @@ class LocalAudioDB:
         self.conn.commit()
 
     def acquire_lock(self):
+        self.check_for_updates()
         self.lock_file = open(self.lock_path, 'w')
         fcntl.flock(self.lock_file, fcntl.LOCK_EX)
 
@@ -52,8 +55,9 @@ class LocalAudioDB:
         self.lock_file.close()
 
     def update_last_modified_time(self):
+        self.last_update_time = time.time()
         with open(self.timestamp_path, 'w') as f:
-            f.write(str(time.time()))
+            f.write(str(self.last_update_time))
 
     def get_last_modified_time(self):
         if not os.path.exists(self.timestamp_path):
@@ -153,16 +157,18 @@ class LocalAudioDB:
             self.index.add(embeddings_array)
 
     def search_embeddings(self, query_embedding, k=5):
+        self.check_for_updates()
         query_embedding = normalize_embedding(query_embedding)
         distances, indices = self.index.search(np.array([query_embedding]), k)
         return distances, indices
 
-    def find_closest_embedding(self, query_embedding):
+    def find_closest_embedding(self, query_embedding, retry=3):
+        self.check_for_updates()
         if self.index.ntotal == 0:
             return None, None, None
-        query_embedding = normalize_embedding(query_embedding)
+        normal_query_embedding = normalize_embedding(query_embedding)
 
-        distances, indices = self.index.search(np.array([query_embedding]), 1)
+        distances, indices = self.index.search(np.array([normal_query_embedding]), 1)
 
         closest_index = indices[0][0]
         closest_distance = distances[0][0]
@@ -177,6 +183,8 @@ class LocalAudioDB:
         else:
             if self.index.ntotal == 1:
                 return None, None, None
+            if retry > 0:
+                self.find_closest_embedding(query_embedding, retry=retry-1)
             raise Exception("FAISS index and SQLite database are out of sync.")
 
     def serialize_faiss_index(self):

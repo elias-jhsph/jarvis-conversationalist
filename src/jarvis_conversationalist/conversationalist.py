@@ -105,8 +105,7 @@ def converse(memory, interrupt_event, start_event, stop_event):
     capture_process = multiprocessing.Process(target=audio_capture_process,
                                               args=(audio_queue, speaking, multiprocessing_stop_event), )
     text_process = multiprocessing.Process(target=audio_processing_thread,
-                                                args=(audio_queue, text_queue, speaking,
-                                                      multiprocessing_stop_event), )
+                                           args=(audio_queue, text_queue, speaking, multiprocessing_stop_event), )
 
     capture_process.start()
     text_process.start()
@@ -116,7 +115,7 @@ def converse(memory, interrupt_event, start_event, stop_event):
     timestamps = []
     schedule_refresh_assistant()
     logger.info("Waiting for text queue...")
-    while text_queue.empty():
+    while text_queue.empty() and not stop_event.is_set():
         threading.Event().wait(1)
     logger.info("Starting...")
     while not text_queue.empty() and not stop_event.is_set():
@@ -126,7 +125,6 @@ def converse(memory, interrupt_event, start_event, stop_event):
             pass
     play_audio_file(core_path + "/tone_one.wav", blocking=False)
     start_event.set()
-    last_response_time = None
     delays = []
     while not stop_event.is_set():
         interrupt_event.clear()
@@ -155,13 +153,9 @@ def converse(memory, interrupt_event, start_event, stop_event):
             while transcript and timestamps[0] < current_time - memory:
                 transcript.pop(0)
                 timestamps.pop(0)
-            transcript_long = len("\n".join(transcript)) > 25
-            if last_response_time is None:
-                time_since_last_response = 100000000
-            else:
-                time_since_last_response = time.time() - last_response_time
+
             # Check for "jarvis" and print buffer if found
-            if wake_word in text.lower() or (time_since_last_response < 15 and transcript_long):
+            if wake_word in text.lower():
                 logger.info(" - - Checking if what has been said was directed at me...")
                 logger.info("\n".join(transcript))
                 directed_at_results = check_for_directed_at_me(transcript)
@@ -209,19 +203,21 @@ def converse(memory, interrupt_event, start_event, stop_event):
                     beeps_stop_event = play_audio_file(core_path+"/beeps.wav", loops=7, blocking=False)
                     extracted_query = extract_query(transcript)
                     logger.info("Query extracted: " + extracted_query)
+                    new_history = None
                     if not interrupt_event.is_set():
-                        try:
+                        #try:
                             new_history = process_assistant_response(extracted_query, beeps_stop_event, interrupt_event)
-                        except Exception as e:
-                            logger.error(e)
-                            play_audio_file(core_path + "/major_error.wav", blocking=False)
-                            new_history = [{"content": extracted_query, "role": "user"},
-                                           {"content": "I'm sorry, I'm having so issues with my circuits.",
-                                            "role": "assistant"}]
-                    logger.info("Resolving...")
-                    resolve_response(new_history)
-                    schedule_refresh_assistant()
-                    logger.info("Resolved")
+                        # except Exception as e:
+                        #     logger.error(e)
+                        #     play_audio_file(core_path + "/major_error.wav", blocking=False)
+                        #     new_history = [{"content": extracted_query, "role": "user"},
+                        #                    {"content": "I'm sorry, I'm having so issues with my circuits.",
+                        #                     "role": "assistant"}]
+                    if new_history:
+                        logger.info("Resolving...")
+                        resolve_response(new_history)
+                        schedule_refresh_assistant()
+                        logger.info("Resolved")
                     if interrupt_event.is_set():
                         logger.info("Interrupted")
                         interrupt_event.clear()
@@ -232,17 +228,25 @@ def converse(memory, interrupt_event, start_event, stop_event):
                         audio_queue.get()
                     while not text_queue.empty():
                         text_queue.get()
-                    last_response_time = time.time()
                     speaking.clear()
-                    play_audio_file(core_path+"/tone_one.wav", blocking=False, delay=2)
+                    play_audio_file(core_path+"/tone_one.wav", blocking=True)
+    logger.info("Converse trying to shutdown")
     interrupt_event.set()
     speaking.set()
     multiprocessing_stop_event.set()
     audio_queue.put((None, time.time()))
     audio_queue.put((None, time.time()))
     audio_queue.put((None, time.time()))
-    capture_process.join(timeout=20)
-    text_process.join(timeout=20)
+    logger.info("Capture trying to shutdown")
+    capture_process.join(timeout=10)
+    if capture_process.is_alive():
+        logger.warning("Terminating Capture...")
+    capture_process.terminate()
+    logger.info("Transcribe trying to shutdown")
+    text_process.join(timeout=10)
+    if text_process.is_alive():
+        logger.warning("Terminating Transcribe...")
+    capture_process.terminate()
 
 
 if __name__ == "__main__":

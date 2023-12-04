@@ -8,7 +8,7 @@ warnings.filterwarnings("ignore", message=".*audio._backend.set_audio_backend.*"
 from torch import device
 from torch.cuda import is_available
 from pyannote.audio import Pipeline
-from .audio_vectordb import LocalAudioDB
+from audio_vectordb import LocalAudioDB
 
 
 def db_speaker_id(speaker_id):
@@ -149,16 +149,6 @@ class SpeakerIdentifier:
         :return: the speaker ID
         :rtype: str
         """
-        # cut the audio data to the start and end times
-        # from pydub import AudioSegment
-        # audio_data_io.seek(0)
-        # audio_data = AudioSegment.from_file(audio_data_io, format="wav")
-        # audio_data = audio_data[start*1000:end*1000]
-        # audio_data_io_clip = BytesIO()
-        # audio_data.export(audio_data_io_clip, format="wav")
-        # audio_data_io_clip.seek(0)
-        # diarization, embeddings = self.pipeline(audio_data_io_clip, return_embeddings=True)
-        # embedding = embeddings[0]
         closest_id, closest_embedding, closest_distance = self.unknown_speakers.find_closest_embedding(embedding)
         if closest_distance is not None:
             if int(closest_distance) < self.similar_speaker_threshold:
@@ -224,29 +214,3 @@ class SpeakerIdentifier:
             timeline.append((start, end, speaker_id))
         return timeline
 
-# from logger_config import get_log_folder_path
-# dir_root = get_log_folder_path()
-# self = SpeakerIdentifier(persist_directory=dir_root)
-# while self.get_next_unknown_speaker_id() != "Unknown Speaker 1":
-#     self.remove_unknown_speaker(self.get_last_unknown_speaker_id())
-# # read test.wav into audio_data_io
-# audio_data_io = BytesIO()
-# audio_data_io.write(open("1.wav", "rb").read())
-# audio_data_io.seek(0)
-# timeline = self.get_speakers(audio_data_io)
-# print(timeline)
-# audio_data_io = BytesIO()
-# audio_data_io.write(open("2.wav", "rb").read())
-# audio_data_io.seek(0)
-# timeline = self.get_speakers(audio_data_io)
-# print(timeline)
-# audio_data_io = BytesIO()
-# audio_data_io.write(open("3.wav", "rb").read())
-# audio_data_io.seek(0)
-# timeline = self.get_speakers(audio_data_io)
-# print(timeline)
-# audio_data_io = BytesIO()
-# audio_data_io.write(open("4.wav", "rb").read())
-# audio_data_io.seek(0)
-# timeline = self.get_speakers(audio_data_io)
-# print(timeline)

@@ -104,25 +104,29 @@ def audio_processing_thread(audio_queue, text_queue, speaking, stop_event):
             global model
             model = whisper.load_model("base.en", download_root=dir_path)
         while stop_event.is_set() is False:
-            audio_data, ts = audio_queue.get()
-            if not speaking.is_set() and audio_data is not None:
-                while not recog_audio_queue.empty():
-                    recog_audio_queue.get()
-                while not speakers_queue.empty():
-                    speakers_queue.get()
-                recog_audio_queue.put(audio_data)
-                text = convert_to_text(audio_data)
-                if not speaking.is_set() and audio_data is not None:
-                    try:
-                        speakers = speakers_queue.get(timeout=5)
-                        text = fuse_text_and_speakers(text, speakers)
-                    except multiprocessing.queues.Empty:
-                        text = text['text']
+            if audio_queue.empty():
+                speaking.wait(timeout=0.2)
+            else:
+                audio_data, ts = audio_queue.get()
+                if audio_data is None:
+                    text_queue.put(("", ts))
+                elif not speaking.is_set() and not stop_event.is_set():
+                    while not recog_audio_queue.empty():
+                        recog_audio_queue.get()
+                    while not speakers_queue.empty():
+                        speakers_queue.get()
+                    if not speaking.is_set() and not stop_event.is_set():
+                        recog_audio_queue.put(audio_data)
+                        text = convert_to_text(audio_data)
+                        if not speaking.is_set() and not stop_event.is_set():
+                            try:
+                                speakers = speakers_queue.get(timeout=5)
+                                text = fuse_text_and_speakers(text, speakers)
+                            except multiprocessing.queues.Empty:
+                                text = text['text']
 
-                    if not speaking.is_set():
-                        text_queue.put((text, ts))
-            if audio_data is None:
-                text_queue.put(("", ts))
+                            if not speaking.is_set() and not stop_event.is_set():
+                                text_queue.put((text, ts))
     except KeyboardInterrupt:
         return
 

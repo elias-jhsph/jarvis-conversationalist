@@ -123,7 +123,6 @@ def audio_capture_process(audio_queue, speaking, stop_event):
             if not speaking.is_set():
                 audio_data = listen_to_user(level)
                 if not speaking.is_set() and not stop_event.is_set() and audio_data is not None:
-                    print("Adding audio:", time.time())
                     audio_queue.put((audio_data, time.time()))
                 if first:
                     first = False

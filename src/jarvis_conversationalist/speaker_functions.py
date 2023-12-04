@@ -13,8 +13,10 @@ def get_speaker_system_appendix():
           "The only way the system can know who is speaking is if you tell it to associate an Unknown Speaker with a " \
           "name by asking the user(s) to provide a name and storing it with the correct function. The user(s) do not " \
           "know what 'Unknown Speaker X' number they are. Do not ask them to provide a name for a specific " \
-          "'Unknown Speaker X' number. Instead, ask them to provide a name for the person that is speaking," \
-          " who spoke last, or who said something specific. If you are unsure who is speaking, ask for clarification."
+          "'Unknown Speaker X' number. Instead, ask them to provide a name for the person that is speaking, " \
+          "who spoke last, or who said something specific. If you are unsure who is speaking, ask for clarification. " \
+          "This means you CAN recognize voices, just trust your annotations (remember the same person may talk with " \
+          "multiple voices)."
     return out
 
 

@@ -1,7 +1,7 @@
 import multiprocessing
 import queue
 import threading
-import time
+import re
 import wave
 import io
 import warnings
@@ -59,6 +59,12 @@ class SpeechStreamer:
         :type rt_queue: queue.Queue(), optional
         """
         self.queue = queue.Queue()
+        if rt_queue is None:
+            rt_queue = multiprocessing.Queue()
+        if stop_other_audio is None:
+            stop_other_audio = multiprocessing.Event()
+        if skip is None:
+            skip = multiprocessing.Event()
         self.rt_queue = rt_queue
         self.playing = False
         self.thread = threading.Thread(target=self._play_audio, args=(stop_other_audio, skip))
@@ -174,7 +180,7 @@ class SpeechStreamer:
             byte_data = text_to_speech(text, stream=True, model=model)
         except TextToSpeechError:
             return
-        time.sleep(delay)
+        self.skip.wait(timeout=delay)
         wav_io = io.BytesIO(byte_data)
         with wave.open(wav_io, 'rb') as wav_file:
             n_channels, sample_width, frame_rate, n_frames = wav_file.getparams()[:4]
@@ -185,9 +191,9 @@ class SpeechStreamer:
 
         def generator():
             for i in range(0, len(np_audio_data), CHUNK):
-                yield np_audio_data[i:i + CHUNK].tobytes()
+                yield np_audio_data[i:i + CHUNK]
         rt_text.put({"role": "assistant", "content": text, "model": model})
-        self.queue.put((generator(), frame_rate))
+        self.queue.put((generator, frame_rate))
 
 
 def stream_audio_response(streaming_text: Iterator[Dict], stop_audio_event: Optional[threading.Event] = None,
@@ -256,8 +262,9 @@ def stream_audio_response(streaming_text: Iterator[Dict], stop_audio_event: Opti
                             merged_sentences.append(sentences[-1].text.strip())
 
                         for sentence in merged_sentences[:-1]:
-                            speech_stream.queue_text(sentence, delay=delay, model=model)
-                            delay = 0
+                            if len(re.sub('[^a-z|A-Z|0-9]', '', sentence)) > 1:
+                                speech_stream.queue_text(sentence, delay=delay, model=model)
+                                delay = 0
 
                         # Keep the last part (which may be an incomplete sentence) in the buffer
                         buffer = merged_sentences[-1]
@@ -294,8 +301,11 @@ def stream_audio_response(streaming_text: Iterator[Dict], stop_audio_event: Opti
         if reason == "function_call":
             buffer += " Processing..."
             output += " Processing..."
-
-    speech_stream.queue_text(buffer)
+    if len(re.sub('[^a-z|A-Z|0-9]', '', buffer)) > 1:
+        speech_stream.queue_text(buffer)
+    else:
+        if buffer == output:
+            speech_stream.queue_text("Processing...")
     speech_stream.stop()
     if len(tool_calls) == 0:
         tool_calls = None
