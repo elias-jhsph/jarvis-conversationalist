@@ -38,6 +38,13 @@ if args.wipe_all_jarvis_memory:
         shutil.rmtree(db_path)
     quit(0)
 
+lock_known_speakers = os.path.join(get_log_folder_path(), "known_speakers_db", "localaudiodb.lock")
+lock_unknown_speakers = os.path.join(get_log_folder_path(), "unknown_speakers_db", "localaudiodb.lock")
+if os.path.exists(lock_known_speakers):
+    os.remove(lock_known_speakers)
+if os.path.exists(lock_unknown_speakers):
+    os.remove(lock_unknown_speakers)
+
 from .conversationalist import converse
 import warnings
 

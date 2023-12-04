@@ -34,7 +34,10 @@ def store_name_for_unknown_speaker(unknown_speaker_id="", name=""):
             unknown_speaker_id = "Unknown Speaker "+unknown_speaker_id
         else:
             raise ValueError("The unknown_speaker_id must start with 'Unknown Speaker '.")
-    embedding = speaker_pipeline.get_unknown_embedding(unknown_speaker_id)
+    try:
+        embedding = speaker_pipeline.get_unknown_embedding(unknown_speaker_id)
+    except TypeError:
+        embedding = None
     if embedding is None:
         raise ValueError("The unknown_speaker_id does not exist.")
     speaker_pipeline.add_known_speaker(embedding, name)

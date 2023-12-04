@@ -8,7 +8,7 @@ warnings.filterwarnings("ignore", message=".*audio._backend.set_audio_backend.*"
 from torch import device
 from torch.cuda import is_available
 from pyannote.audio import Pipeline
-from audio_vectordb import LocalAudioDB
+from .audio_vectordb import LocalAudioDB
 
 
 def db_speaker_id(speaker_id):
@@ -44,7 +44,7 @@ class SpeakerIdentifier:
     def __init__(
         self,
         persist_directory: str = "speaker_database",
-        similar_speaker_threshold: float = 1,
+        similar_speaker_threshold: float = .5,
     ):
         """
         The constructor for the SpeakerIdentifier class. It initializes the class with a directory to persist speaker
@@ -101,7 +101,7 @@ class SpeakerIdentifier:
         """
         closest_id, closest_embedding, closest_distance = self.known_speakers.find_closest_embedding(embedding)
         if closest_distance:
-            if int(closest_distance) < self.similar_speaker_threshold:
+            if float(closest_distance) < self.similar_speaker_threshold:
                 closest_id = pretty_known_speaker_id(closest_id)
                 return closest_id
         return None
@@ -151,7 +151,7 @@ class SpeakerIdentifier:
         """
         closest_id, closest_embedding, closest_distance = self.unknown_speakers.find_closest_embedding(embedding)
         if closest_distance is not None:
-            if int(closest_distance) < self.similar_speaker_threshold:
+            if float(closest_distance) < self.similar_speaker_threshold:
                 return pretty_speaker_id(closest_id)
         speaker_id = self.get_next_unknown_speaker_id()
         self.unknown_speakers.add_embedding(db_speaker_id(speaker_id), embedding)
@@ -166,7 +166,7 @@ class SpeakerIdentifier:
         :return: the speaker embedding
         :rtype: numpy array
         """
-        id, faiss_index, embedding = self.unknown_speakers.get_embedding(db_speaker_id(speaker_id))
+        id, embedding = self.unknown_speakers.get_embedding(db_speaker_id(speaker_id))
         return embedding
 
     def remove_unknown_speaker(self, speaker_id):
