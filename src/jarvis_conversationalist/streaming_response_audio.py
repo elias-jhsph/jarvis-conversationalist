@@ -76,6 +76,7 @@ class SpeechStreamer:
         self.audio_count = 0
         self.lock = threading.Lock()
         self.done = False
+        self.last_events = {}
 
     def _play_audio(self, stop_other_audio: threading.Event = None,
                     skip: threading.Event = None) -> None:
@@ -138,7 +139,14 @@ class SpeechStreamer:
         """
         with self.lock:
             self.audio_count += 1
-        tts_thread = threading.Thread(target=self._process_text_to_speech, args=(text, delay, model, self.rt_queue))
+            current_event = threading.Event()
+            self.last_events[self.audio_count] = current_event
+            last_event = None
+            if self.audio_count > 1:
+                last_event = self.last_events[self.audio_count-1]
+        tts_thread = threading.Thread(target=self._process_text_to_speech,
+                                      args=(text, delay, model, self.rt_queue,
+                                            current_event, last_event))
         tts_thread.daemon = True
         tts_thread.start()
 
@@ -158,7 +166,9 @@ class SpeechStreamer:
             while self.stop_event.is_set() is False and self.skip.is_set() is False:
                 self.skip.wait(timeout=1)
 
-    def _process_text_to_speech(self, text: str, delay: float, model: str, rt_text: queue.Queue) -> None:
+    def _process_text_to_speech(self, text: str, delay: float, model: str,
+                                rt_text: queue.Queue, current: threading.Event,
+                                last: threading.Event) -> None:
         """
         Processes the text data into audio format.
 
@@ -175,6 +185,10 @@ class SpeechStreamer:
         :type model: str
         :param rt_text: A queue to send real-time transcription data.
         :type rt_text: queue.Queue()
+        :param current: An event to let others know this was added
+        :type current: threading.event()
+        :param last: An event to make sure the last text is added
+        :type last: threading.event()
         """
         try:
             byte_data = text_to_speech(text, stream=True, model=model)
@@ -193,7 +207,10 @@ class SpeechStreamer:
             for i in range(0, len(np_audio_data), CHUNK):
                 yield np_audio_data[i:i + CHUNK]
         rt_text.put({"role": "assistant", "content": text, "model": model})
+        if last:
+            last.wait()
         self.queue.put((generator, frame_rate))
+        current.set()
 
 
 def stream_audio_response(streaming_text: Iterator[Dict], stop_audio_event: Optional[threading.Event] = None,
