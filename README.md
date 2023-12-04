@@ -15,6 +15,7 @@ This package is availible here [https://pypi.org/project/jarvis-conversationalis
 
 This project requires Python 3.11 or later. This app currently works on Mac and Linux (which can cuda accelerate if able):
 
+
 ```bash
 pip install jarvis_conversationalist
 ```
