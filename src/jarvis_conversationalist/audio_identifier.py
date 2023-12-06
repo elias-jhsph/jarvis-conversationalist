@@ -55,8 +55,8 @@ class SpeakerIdentifier:
         self.known_speakers = LocalAudioDB(self.known_speakers_path)
         self.unknown_speakers_path = os.path.join(persist_directory, "unknown_speakers_db")
         self.unknown_speakers = LocalAudioDB(self.unknown_speakers_path)
-        self.pipeline = Pipeline.from_pretrained("pyannote/speaker-diarization-3.1",
-                                                 use_auth_token="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"
+        self.pipeline = Pipeline.from_pretrained("speaker-diarization-3.1",
+                                                 use_auth_token="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"
                                                  )
 
     def speedup_if_able(self):

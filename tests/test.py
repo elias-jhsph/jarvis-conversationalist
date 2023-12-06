@@ -1,6 +1,5 @@
 import logging
 import multiprocessing
-multiprocessing.set_start_method('spawn')
 import threading
 import unittest
 import os
