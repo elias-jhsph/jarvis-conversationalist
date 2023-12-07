@@ -9,6 +9,7 @@ import warnings
 
 from .speaker_recognition import recognition_process
 from .logger_config import get_log_folder_path, get_logger
+from .config import get_speakers_active
 logger = get_logger()
 
 
@@ -93,40 +94,56 @@ def audio_processing_thread(audio_queue, text_queue, speaking, stop_event):
     :return:
     """
     try:
-        recog_audio_queue = multiprocessing.Queue()
-        speakers_queue = multiprocessing.Queue()
-        recog_process = multiprocessing.Process(target=recognition_process,
-                                               args=(recog_audio_queue, speakers_queue, speaking,
-                                                     stop_event), )
-
-        recog_process.start()
-        if is_available():
-            global model
-            model = whisper.load_model("base.en", download_root=dir_path)
-        while stop_event.is_set() is False:
-            if audio_queue.empty():
-                speaking.wait(timeout=0.2)
-            else:
-                audio_data, ts = audio_queue.get()
-                if audio_data is None:
-                    text_queue.put(("", ts))
-                elif not speaking.is_set() and not stop_event.is_set():
-                    while not recog_audio_queue.empty():
-                        recog_audio_queue.get()
-                    while not speakers_queue.empty():
-                        speakers_queue.get()
-                    if not speaking.is_set() and not stop_event.is_set():
-                        recog_audio_queue.put(audio_data)
-                        text = convert_to_text(audio_data)
+        global model
+        detection_active = get_speakers_active()
+        if detection_active:
+            recog_audio_queue = multiprocessing.Queue()
+            speakers_queue = multiprocessing.Queue()
+            recog_process = multiprocessing.Process(target=recognition_process,
+                                                   args=(recog_audio_queue, speakers_queue, speaking,
+                                                         stop_event), )
+            recog_process.start()
+            if is_available():
+                model = whisper.load_model("base.en", download_root=dir_path)
+            while stop_event.is_set() is False:
+                if audio_queue.empty():
+                    speaking.wait(timeout=0.2)
+                else:
+                    audio_data, ts = audio_queue.get()
+                    if audio_data is None:
+                        text_queue.put(("", ts))
+                    elif not speaking.is_set() and not stop_event.is_set():
+                        while not recog_audio_queue.empty():
+                            recog_audio_queue.get()
+                        while not speakers_queue.empty():
+                            speakers_queue.get()
                         if not speaking.is_set() and not stop_event.is_set():
-                            try:
-                                speakers = speakers_queue.get(timeout=5)
-                                text = fuse_text_and_speakers(text, speakers)
-                            except multiprocessing.queues.Empty:
-                                text = text['text']
-
+                            recog_audio_queue.put(audio_data)
+                            text = convert_to_text(audio_data)
                             if not speaking.is_set() and not stop_event.is_set():
-                                text_queue.put((text, ts))
+                                try:
+                                    speakers = speakers_queue.get(timeout=5)
+                                    text = fuse_text_and_speakers(text, speakers)
+                                except multiprocessing.queues.Empty:
+                                    text = text['text']
+
+                                if not speaking.is_set() and not stop_event.is_set():
+                                    text_queue.put((text, ts))
+        else:
+            if is_available():
+                model = whisper.load_model("base.en", download_root=dir_path)
+            while stop_event.is_set() is False:
+                if audio_queue.empty():
+                    speaking.wait(timeout=0.2)
+                else:
+                    audio_data, ts = audio_queue.get()
+                    if audio_data is None:
+                        text_queue.put(("", ts))
+                    elif not speaking.is_set() and not stop_event.is_set():
+                        text = convert_to_text(audio_data)
+                        text = text['text']
+                        if not speaking.is_set() and not stop_event.is_set():
+                            text_queue.put((text, ts))
     except KeyboardInterrupt:
         return
 

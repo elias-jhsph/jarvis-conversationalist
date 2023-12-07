@@ -1,8 +1,15 @@
 from .audio_identifier import SpeakerIdentifier, db_speaker_id
 from .logger_config import get_log_folder_path
+from .config import get_speakers_active
 
 dir_root = get_log_folder_path()
 speaker_pipeline = SpeakerIdentifier(persist_directory=dir_root)
+speakers_active = get_speakers_active()
+
+
+def disable_speaker_functions():
+    global speakers_active
+    speakers_active = False
 
 
 def get_speaker_system_appendix():
@@ -105,6 +112,8 @@ def remove_name_of_known_speaker_documentation():
 
 
 def get_speaker_function_info():
+    if not speakers_active:
+        return {}
     return {"store_name_for_unknown_speaker": {"function": store_name_for_unknown_speaker,
                                                "schema": store_name_for_unknown_speaker_documentation()[0],
                                                "examples": store_name_for_unknown_speaker_documentation()[1]},
@@ -123,8 +132,12 @@ for val in info.values():
 
 
 def get_speaker_function_list():
+    if not speakers_active:
+        return []
     return function_list
 
 
 def get_speaker_function_examples():
+    if not speakers_active:
+        return []
     return function_examples

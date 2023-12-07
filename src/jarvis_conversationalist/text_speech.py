@@ -221,14 +221,12 @@ def text_to_speech(text: str, model="gpt-4", stream=False):
         os.remove(output_file)
         return byte_data
     if sys.platform == 'linux':
-        print(text)
         fixed_text = text.replace('"', r'\"')
         speed = ".85"
         if slow_flag:
             speed = "1"
         text_cmd = fixed_text
         output_file = os.path.join(audio_folder, str(uuid.uuid4()) + ".wav")
-        print(['mimic3', text_cmd, ">", output_file])
         result = subprocess.run(f"mimic3 \"{text_cmd}\" --length-scale {speed} > '{output_file}'",
                                 capture_output=True,
                                 env=env, shell=True)

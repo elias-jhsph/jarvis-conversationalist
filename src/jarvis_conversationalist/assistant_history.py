@@ -38,7 +38,7 @@ def convert_utc_to_local(utc_time: str) -> str:
     return local_time.strftime("%A, %B %-d, %Y at %-I:%M %p")
 
 
-def _strip_entry(entry: dict or list):
+def strip_entry(entry: dict or list):
     """
     Remove all fields from the entry dictionary except 'role' and 'content'.
 
@@ -50,7 +50,7 @@ def _strip_entry(entry: dict or list):
     if isinstance(entry, list):
         new = []
         for el in entry:
-            new.append(_strip_entry(el))
+            new.append(strip_entry(el))
         return new
     else:
         if "name" in entry:
@@ -371,7 +371,7 @@ class AssistantHistory:
                 if el['batch_id'] == batch:
                     source_ids.append(el['id'])
                     batch_entries.append(el)
-            to_reduce = _strip_entry(batch_entries)
+            to_reduce = strip_entry(batch_entries)
             new_summary = self.summarizer(to_reduce)
             new_summary_metadata = {"role": "assistant",
                                     "source_ids": ",".join(source_ids),
@@ -561,7 +561,7 @@ class AssistantHistory:
         assert token_count <= max_tokens
 
         if only_necessary_fields:
-            context_list = [_strip_entry(entry) for entry in context_list]
+            context_list = [strip_entry(entry) for entry in context_list]
 
         self.last_context = system_message + context_list
 

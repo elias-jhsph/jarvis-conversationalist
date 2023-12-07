@@ -205,14 +205,14 @@ def converse(memory, interrupt_event, start_event, stop_event):
                     logger.info("Query extracted: " + extracted_query)
                     new_history = None
                     if not interrupt_event.is_set():
-                        #try:
+                        try:
                             new_history = process_assistant_response(extracted_query, beeps_stop_event, interrupt_event)
-                        # except Exception as e:
-                        #     logger.error(e)
-                        #     play_audio_file(core_path + "/major_error.wav", blocking=False)
-                        #     new_history = [{"content": extracted_query, "role": "user"},
-                        #                    {"content": "I'm sorry, I'm having so issues with my circuits.",
-                        #                     "role": "assistant"}]
+                        except Exception as e:
+                            logger.error(e)
+                            play_audio_file(core_path + "/major_error.wav", blocking=False)
+                            new_history = [{"content": extracted_query, "role": "user"},
+                                           {"content": "I'm sorry, I'm having so issues with my circuits.",
+                                            "role": "assistant"}]
                     if new_history:
                         logger.info("Resolving...")
                         resolve_response(new_history)
@@ -243,7 +243,7 @@ def converse(memory, interrupt_event, start_event, stop_event):
         logger.warning("Terminating Capture...")
     capture_process.terminate()
     logger.info("Transcribe trying to shutdown")
-    text_process.join(timeout=10)
+    text_process.join(timeout=5)
     if text_process.is_alive():
         logger.warning("Terminating Transcribe...")
     capture_process.terminate()

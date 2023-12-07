@@ -5,11 +5,15 @@ import os
 import threading
 import time
 parser = argparse.ArgumentParser(description='Jarvis Conversationalist CLI')
-parser.add_argument('--user', type=str, help='The username for the OpenAI API')
-parser.add_argument('--key', type=str, help='The key for the OpenAI API')
+parser.add_argument('-u', '--user', type=str, help='The username for the OpenAI API')
+parser.add_argument('-k', '--key', type=str, help='The key for the OpenAI API')
 parser.add_argument('--reset', action='store_true', help='Reset the saved username and key')
-parser.add_argument('--verbose', action='store_true', help='Set the logging level to INFO')
+parser.add_argument('-v', '--verbose', action='store_true', help='Set the logging level to INFO')
 parser.add_argument('--wipe_all_jarvis_memory', action='store_true', help='Reset Jarvis to factory defaults')
+parser.add_argument('-s', '--detect_speakers', action='store_const',
+                    help='Detect speakers in the audio', const="active")
+parser.add_argument('-ns', '--no_speaker_detection', action='store_const',
+                    help='Do not detect speakers in the audio', const="inactive")
 args = parser.parse_args()
 
 os.environ['TOKENIZERS_PARALLELISM'] = "false"
@@ -69,6 +73,10 @@ def main():
             config['user'] = args.user
         if args.key:
             config['key'] = args.key
+        if args.detect_speakers:
+            config['speakers'] = True
+        if args.no_speaker_detection:
+            config['speakers'] = False
 
     save_config(config, key)
 

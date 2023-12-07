@@ -1,4 +1,5 @@
 import os
+import sys
 import json
 from cryptography.fernet import Fernet
 
@@ -12,6 +13,10 @@ KEY_FILE = os.path.join(logs_dir, 'key.key')
 USER = "User"
 KEY = None
 file = {}
+if sys.platform == "darwin":
+    SPEAKERS = True
+else:
+    SPEAKERS = False
 
 
 def load_key():
@@ -51,6 +56,8 @@ if "user" in file:
     USER = file["user"]
 if "key" in file:
     KEY = file["key"]
+if "speakers" in file:
+    SPEAKERS = file["speakers"]
 
 
 def set_user(user):
@@ -63,9 +70,18 @@ def set_openai_key(key):
     KEY = key
 
 
+def set_speakers_active(speakers):
+    global SPEAKERS
+    SPEAKERS = speakers
+
+
 def get_user():
     return USER
 
 
 def get_openai_key():
     return KEY
+
+
+def get_speakers_active():
+    return SPEAKERS
