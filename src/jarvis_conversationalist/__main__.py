@@ -1,4 +1,6 @@
 # __main__.py
+import sys
+
 from .config import set_openai_key, get_openai_key
 import argparse
 import os
@@ -28,7 +30,8 @@ else:
     os.environ["OPENAI_API_KEY"] = get_openai_key()
 
 
-from .config import load_key, load_config, save_config, set_openai_key, set_user, get_openai_key
+from .config import load_key, load_config, save_config, set_openai_key, set_user, get_openai_key,\
+    set_speakers_active, get_speakers_active
 from .logger_config import change_logging_level, get_log_folder_path
 
 if args.wipe_all_jarvis_memory:
@@ -79,7 +82,7 @@ def main():
             config['speakers'] = False
 
     save_config(config, key)
-
+    set_speakers_active(config.get('speakers', sys.platform != 'darwin'))
     set_openai_key(config.get('key', None))
     set_user(config.get('user', 'User'))
 
