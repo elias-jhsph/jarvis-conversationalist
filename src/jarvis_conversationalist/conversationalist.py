@@ -159,7 +159,7 @@ def converse(memory, interrupt_event, start_event, stop_event):
             if wake_word in text.lower():
                 logger.info(" - - Checking if what has been said was directed at me...")
                 logger.info("\n".join(transcript))
-                directed_at_results = check_for_directed_at_me(transcript)
+                directed_at_results = [1]#check_for_directed_at_me(transcript)
                 directed_at_results = [x for x in directed_at_results if x <= 1.0]
                 if len(directed_at_results) == 0:
                     probably_at_me = False
@@ -168,7 +168,7 @@ def converse(memory, interrupt_event, start_event, stop_event):
                     probably_at_me = average(directed_at_results) > target_intended
                 logger.info("Probability at me: " + str(directed_at_results))
                 if probably_at_me:
-                    completion_results = check_for_completion(transcript)
+                    completion_results = [1]#check_for_completion(transcript)
                     logger.info("Probability of completion:" + str(completion_results))
                     completion_results = [x for x in completion_results if x <= 1.0]
                     target_completion = 0.7

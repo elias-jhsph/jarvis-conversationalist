@@ -45,7 +45,7 @@ def check_for_directed_at_me(transcript, n=1):
                      " to " + name + " directly."
 
     response = client.chat.completions.create(model="gpt-3.5-turbo",
-                                              temperature=0.1,
+                                              temperature=0.4,
                                               messages=[{"role": "system", "content": system_message},
                                                         {"role": "user", "content": "\n".join(transcript)}],
                                               functions=functions,
@@ -99,7 +99,7 @@ def check_for_completion(transcript, n=1):
     " if the user is done speaking by analyzing the text below and seeing if the user has completed their thought."
 
     response = client.chat.completions.create(model="gpt-4",
-                                              temperature=0.1,
+                                              temperature=0.4,
                                               messages=[{"role": "system", "content": system_message},
                                                         {"role": "user", "content": "\n".join(transcript)}],
                                               functions=functions,
