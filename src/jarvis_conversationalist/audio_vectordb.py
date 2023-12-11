@@ -7,6 +7,10 @@ import faiss
 import numpy as np
 import sqlite3
 
+from faiss import logger
+
+logger.setLevel("CRITICAL")
+
 
 def normalize_embedding(embedding):
     """Normalize an embedding vector to unit length."""

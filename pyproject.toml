@@ -1,6 +1,6 @@
 [project]
 name = "jarvis_conversationalist"
-version = "0.4.4"
+version = "0.4.5"
 authors = [{name="Elias Weston-Farber", email="eweston4@jhu.edu"}]
 description = "A voice assistant for the command line"
 readme = "README.md"

@@ -4,6 +4,7 @@ import warnings
 from io import BytesIO
 
 warnings.filterwarnings("ignore", message=".*audio._backend.set_audio_backend.*")
+warnings.filterwarnings("ignore", message=".*torchvision is not available1.*")
 
 from torch import device
 from torch.cuda import is_available
