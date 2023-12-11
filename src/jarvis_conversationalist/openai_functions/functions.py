@@ -4,7 +4,7 @@ from .internet_helper import create_internet_context
 from .internet_helper import search
 from .weather_functions import get_weather
 from .google_tools import simple_google_search
-from .basic_tools import write_to_file, open_webpage
+from .basic_tools import write_to_file, open_webpage, read_from_file, list_files
 
 
 def deep_long_duration_internet_research_documentation():
@@ -161,6 +161,67 @@ def write_to_a_file_documentation():
     return schema, examples
 
 
+def read_from_a_file(name=None, folder=None):
+    return read_from_file(name, folder)
+
+
+def read_from_a_file_documentation():
+    schema = {"type": "function",
+                "function": {
+                    "name": "read_from_a_file",
+                    "description": "Reads text from a file with the given name",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "name": {
+                                "type": "string",
+                                "description": "The name of the file to read from.",
+                            },
+                            "folder": {
+                                "type": "string",
+                                "description": "The folder to read from. Must be one of: Documents, Downloads, or "
+                                               "Desktop.",
+                            },
+                        },
+                        "required": ["name", "folder"],
+                    },
+                }
+                }
+    examples = 'Examples:\n {"function_name": "read_from_a_file", "parameters": {"name": "test.txt", "folder": ' \
+               '"Documents"}}\n {"function_name": "read_from_a_file", "parameters": {"name": "hello.json", "folder": ' \
+               '"Downloads"}}\n {"function_name": "read_from_a_file", "parameters": {"name": "test.md", "folder": ' \
+               '"Desktop"}}\n'
+    return schema, examples
+
+
+def list_files_in_folder(folder=None):
+    return list_files(folder)
+
+
+def list_files_in_folder_documentation():
+    schema = {"type": "function",
+                "function": {
+                    "name": "list_files_in_folder",
+                    "description": "Lists the files in the given folder",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "folder": {
+                                "type": "string",
+                                "description": "The folder to list files from. Must be one of: Documents, Downloads, "
+                                               "or Desktop.",
+                            },
+                        },
+                        "required": ["folder"],
+                    },
+                }
+                }
+    examples = 'Examples:\n {"function_name": "list_files_in_folder", "parameters": {"folder": "Documents"}}\n ' \
+               '{"function_name": "list_files_in_folder", "parameters": {"folder": "Downloads"}}\n ' \
+               '{"function_name": "list_files_in_folder", "parameters": {"folder": "Desktop"}}\n'
+    return schema, examples
+
+
 def open_url_for_user(url=None):
     return open_webpage(url)
 
@@ -206,6 +267,12 @@ def get_function_info():
             "open_url_for_user": {"function": open_url_for_user,
                                     "schema": open_url_for_user_documentation()[0],
                                     "examples": open_url_for_user_documentation()[1]},
+            "read_from_a_file": {"function": read_from_a_file,
+                                    "schema": read_from_a_file_documentation()[0],
+                                    "examples": read_from_a_file_documentation()[1]},
+            "list_files_in_folder": {"function": list_files_in_folder,
+                                        "schema": list_files_in_folder_documentation()[0],
+                                        "examples": list_files_in_folder_documentation()[1]},
             }
 
 
