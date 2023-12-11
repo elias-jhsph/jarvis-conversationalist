@@ -13,7 +13,7 @@ KEY_FILE = os.path.join(logs_dir, 'key.key')
 USER = "User"
 KEY = None
 file = {}
-if sys.platform == "darwin":
+if sys.platform != "darwin":
     SPEAKERS = True
 else:
     SPEAKERS = False

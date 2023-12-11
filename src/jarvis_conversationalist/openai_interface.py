@@ -52,13 +52,26 @@ assert enc.decode(enc.encode("hello world")) == "hello world"
 tools_list = get_function_list() + get_speaker_function_list()
 function_info = get_function_info()
 speaker_info = get_speaker_function_info()
+speaker_detection = False
 for speaker_info_key, speaker_info_value in speaker_info.items():
+    speaker_detection = True
     function_info[speaker_info_key] = speaker_info_value
 
 # Setup background task system
 executor = ThreadPoolExecutor(max_workers=1)
 tasks = []
 atexit.register(executor.shutdown, wait=True)
+
+
+def get_speaker_detection():
+    """
+    Get whether speaker detection is enabled or not.
+
+    :return: Whether speaker detection is enabled or not.
+    :rtype: bool
+    """
+    global speaker_detection
+    return speaker_detection
 
 
 def summarizer(input_list):
@@ -93,39 +106,40 @@ def summarizer(input_list):
     return {"role": "system", "content": output}
 
 
-def recollect(question="", search_query="", mode=""):
+def recollect(question="", query="", mode=""):
     """
     Search the conversation history for a query.
 
     :param question: The question to answer.
     :type question: str
-    :param search_query: The query to search for.
-    :type search_query: str
+    :param query: The query input.
+    :type query: str
     :param mode: The mode to search in.
-    Can be 'search_full', 'search_details', 'similarity_full', or 'similarity_details'.
+    Can be 'search_exact_text_full', 'search_exact_text_summaries', 'vector_similarity_full', or
+    'vector_similarity_summaries'.
     :type mode: str
     :return: The AI Assistant's response.
     :rtype: str
     """
     global models
     description = ""
-    if mode == "search_full":
-        description = "search for the literal string '" + search_query + \
+    if mode == "search_exact_text_summaries":
+        description = "search for the literal string '" + query + \
                       "' in a collection of summaries of conversations"
-        results = history_access.summaries.get(where_document={"$contains": search_query},
+        results = history_access.summaries.get(where_document={"$contains": query},
                                                include=["metadatas", "documents"])
-    if mode == "search_details":
-        description = "search for the literal string '" + search_query + "' in a collection of conversations"
-        results = history_access.history.get(where_document={"$contains": search_query},
+    if mode == "search_exact_text_full":
+        description = "search for the literal string '" + query + "' in a collection of conversations"
+        results = history_access.history.get(where_document={"$contains": query},
                                              include=["metadatas", "documents"])
-    if mode == "similarity_full":
-        description = "search for the most similar string to '" + search_query + \
+    if mode == "vector_similarity_summaries":
+        description = "search for the most similar string to '" + query + \
                       "' in a collection of summaries of conversations"
-        results = history_access.summaries.query(query_texts=[search_query], n_results=20,
+        results = history_access.summaries.query(query_texts=[query], n_results=20,
                                                  include=["metadatas", "documents"])
-    if mode == "similarity_details":
-        description = "search for the most similar string to '" + search_query + "' in a collection of conversations"
-        results = history_access.history.query(query_texts=[search_query], n_results=20,
+    if mode == "vector_similarity_full":
+        description = "search for the most similar string to '" + query + "' in a collection of conversations"
+        results = history_access.history.query(query_texts=[query], n_results=20,
                                                include=["metadatas", "documents"])
     if mode == "schema":
         schema = {"type": "function",
@@ -139,36 +153,38 @@ def recollect(question="", search_query="", mode=""):
                                 "type": "string",
                                 "description": "The question to answer.",
                             },
-                            "search_query": {
+                            "query": {
                                 "type": "string",
-                                "description": "The query to search for. If mode is 'search_full' or 'search_details' "
-                                               "this is the literal string to search for so keep it short or you "
-                                               "will get no results. If mode is 'similarity_full' "
-                                               "or 'similarity_details' this is the string to find the most similar "
+                                "description": "The query to search for. If mode is 'search_exact_text_full' or "
+                                               "'search_exact_text_summaries' this is the literal string to search "
+                                               "for so keep it short or you will get no results. If mode is "
+                                               "'vector_similarity_full' or 'vector_similarity_summaries' this "
+                                               "is the string to find the most similar "
                                                "string to so you can make it longer.",
                             },
                             "mode": {
                                 "type": "string",
-                                "description": "The mode to search in. Can be 'search_full', 'search_details', "
-                                               "'similarity_full', or 'similarity_details'. 'search_full' searches "
+                                "description": "The mode to search in. Can be 'search_exact_text_full', "
+                                               "'search_exact_text_summaries', 'vector_similarity_full', or "
+                                               "'vector_similarity_summaries'. 'search_exact_text_full' searches "
                                                "for the literal string in a collection of summaries of conversations. "
-                                               "'search_details' searches for the literal string in a collection of "
-                                               "conversations. 'similarity_full' searches for the most similar "
-                                               "string to the query in a collection of summaries of conversations. "
-                                               "'similarity_details' searches for the most similar string to the "
-                                               "query in a collection of conversations.",
+                                               "'search_exact_text_summaries' searches for the literal string in a "
+                                               "collection of  conversations. 'vector_similarity_full' searches for "
+                                               "the most similar string to the query in a collection of summaries of "
+                                               "conversations. 'vector_similarity_summaries' searches for the most "
+                                               "similar string to the query in a collection of conversations.",
                             },
                         },
-                        "required": ["question", "search_query", "mode"],
+                        "required": ["question", "query", "mode"],
                      },
                   }
                   }
         return schema
     if mode == "examples":
-        examples = 'Examples:\n {"function_name": "recollect", "parameters": {"question": "What is the name of the' \
-                   'user\'s dog?", "search_query": "dog", "mode": "search_full"}}\n {"function_name": "recollect", ' \
-                   'parameters": {"question": "What is the town the user grew up in?", "search_query": "I was born in' \
-                   ' and grew up in ", "mode": "similarity_details"}}\n'
+        examples = 'Examples:\n{"function_name": "recollect", "parameters": {"question": "What is the name of the' \
+                   'user\'s dog?", "query": "dog", "mode": "search_exact_text_full"}}\n{"function_name": "recollect",' \
+                   ' parameters": {"question": "What is the town the user grew up in?", "query": "I was born in' \
+                   ' and grew up in ", "mode": "vector_similarity_summaries"}}\n'
         return examples
     if description == "":
         raise Exception("Invalid mode")
@@ -178,16 +194,28 @@ def recollect(question="", search_query="", mode=""):
 
     input_list = []
     for i in range(len(results['ids'])):
-        input_list.append({"role": results["metadatas"][i]["role"], "content": results["documents"][i] + "\n" +
-                           " took place on: " + convert_utc_to_local(results["metadatas"][i]["utc_time"])})
+        print(results)
+        if mode.startswith("vector_similarity"):
+            input_list.append({"role": results["metadatas"][0][i]["role"],
+                               "content": results["documents"][0][i] +
+                               "\n" + " took place on: " +
+                               convert_utc_to_local(results["metadatas"][0][i]["utc_time"])})
+        else:
+            input_list.append({"role": results["metadatas"][i]["role"], "content": results["documents"][i] + "\n" +
+                               " took place on: " + convert_utc_to_local(results["metadatas"][i]["utc_time"])})
     input_list = history_access.truncate_input_context(input_list)
 
     system_mem = [{"role": "system", "content": "You help an AI remember things by receiving a context based on a " +
                                                 description + "\n Please help it answer the following question:" +
-                                                "\n\n" + question}]
+                                                "\n\n" + question + "\n\nNOTE: If the current conversation  " +
+                                                "context does not contain the answer to the question, " +
+                                                "make sure to tell the AI to modify either modify the query and if"
+                                                "the recollection process fails to the answer the question after"
+                                                "multiple query modifications, to consider the possibility that "
+                                                "what it is trying to remember 'is not in our memories'."}]
     response = client.chat.completions.create(model=models["primary"]['name'],
                                               messages=system_mem,
-                                              temperature=models["primary"]["temperature"],
+                                              temperature=.1,
                                               max_tokens=models["primary"]["max_message"],
                                               top_p=models["primary"]["top_p"],
                                               frequency_penalty=models["primary"]["frequency_penalty"],

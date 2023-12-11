@@ -10,7 +10,8 @@ from numpy import average
 import importlib.resources as pkg_resources
 
 from .openai_utility_functions import check_for_directed_at_me, check_for_completion, extract_query
-from .openai_interface import stream_response, resolve_response, use_tools, schedule_refresh_assistant
+from .openai_interface import stream_response, resolve_response, use_tools, schedule_refresh_assistant, \
+    get_speaker_detection
 from .streaming_response_audio import stream_audio_response, set_rt_text_queue
 from .audio_player import play_audio_file
 from .audio_listener import audio_capture_process
@@ -201,7 +202,7 @@ def converse(memory, interrupt_event, start_event, stop_event):
                                 threading.Event().wait(0.3)
                     speaking.set()
                     beeps_stop_event = play_audio_file(core_path+"/beeps.wav", loops=7, blocking=False)
-                    extracted_query = extract_query(transcript)
+                    extracted_query = extract_query(transcript, speaker_detection=get_speaker_detection())
                     logger.info("Query extracted: " + extracted_query)
                     new_history = None
                     if not interrupt_event.is_set():

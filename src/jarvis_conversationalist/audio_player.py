@@ -86,16 +86,16 @@ def _play_audio_file_blocking(file_path: str, stop_event: threading.Event, loops
         for loop in range(loops):
             if not stop_event.is_set() or (added_stop_event and not added_stop_event.is_set()):
                 data, fs = sf.read(file_path)
-                sd.play(data, fs)
-                while sd.get_stream().active:
-                    if stop_event.is_set() or (added_stop_event and added_stop_event.is_set()):
-                        sd.stop()
-                        break
-                    if added_stop_event:
-                        added_stop_event.wait(timeout=.02)
-                    else:
-                        stop_event.wait(timeout=.02)
+        sd.play(data, fs, latency=.25)
+        while sd.get_stream().active:
+            if stop_event.is_set() or (added_stop_event and added_stop_event.is_set()):
                 sd.stop()
+                break
+            if added_stop_event:
+                added_stop_event.wait(timeout=.02)
+            else:
+                stop_event.wait(timeout=.02)
+        sd.stop()
         # Destroy the file if needed
         if destroy:
             os.remove(file_path)

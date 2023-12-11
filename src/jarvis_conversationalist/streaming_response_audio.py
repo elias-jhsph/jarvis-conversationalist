@@ -106,7 +106,8 @@ class SpeechStreamer:
                 self.playing = True
 
             chunk_played = False
-            with sd.OutputStream(samplerate=sample_rate, channels=CHANNELS, dtype='int16') as stream:
+            with sd.OutputStream(samplerate=sample_rate, latency=.25,
+                                 channels=CHANNELS, dtype='int16') as stream:
                 for chunk in generator():
                     if skip and skip.is_set():
                         self.stop()

@@ -52,6 +52,8 @@ if os.path.exists(lock_known_speakers):
 if os.path.exists(lock_unknown_speakers):
     os.remove(lock_unknown_speakers)
 
+print("\033[KSummarizing previous conversations... Please Wait...\033[K", end='\r')
+
 from .conversationalist import converse
 import warnings
 
@@ -81,10 +83,10 @@ def main():
         if args.no_speaker_detection:
             config['speakers'] = False
 
-    save_config(config, key)
     set_speakers_active(config.get('speakers', sys.platform != 'darwin'))
     set_openai_key(config.get('key', None))
     set_user(config.get('user', 'User'))
+    save_config(config, key)
 
     if get_openai_key() is None:
         print("Please set your OpenAI API key using the --key argument once to cache your key.")

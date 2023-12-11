@@ -45,6 +45,7 @@ def check_for_directed_at_me(transcript, n=1):
                      " to " + name + " directly."
 
     response = client.chat.completions.create(model="gpt-3.5-turbo",
+                                              temperature=0.1,
                                               messages=[{"role": "system", "content": system_message},
                                                         {"role": "user", "content": "\n".join(transcript)}],
                                               functions=functions,
@@ -98,6 +99,7 @@ def check_for_completion(transcript, n=1):
     " if the user is done speaking by analyzing the text below and seeing if the user has completed their thought."
 
     response = client.chat.completions.create(model="gpt-4",
+                                              temperature=0.1,
                                               messages=[{"role": "system", "content": system_message},
                                                         {"role": "user", "content": "\n".join(transcript)}],
                                               functions=functions,
@@ -111,7 +113,7 @@ def check_for_completion(transcript, n=1):
     return probabilities
 
 
-def extract_query(transcript):
+def extract_query(transcript, speaker_detection=True):
     """
     Extracts the query from the user's speech.
 
@@ -156,6 +158,19 @@ def extract_query(transcript):
                                                                                            "sure to include the " \
                                                                                            "speaker annotation for " \
                                                                                            "each subsection."
+    if not speaker_detection:
+        system_message = "You are seeing a live transcription of what is being said in a room. It is your job to " \
+                         "determine the query the user is asking by analyzing the text below and extracting word " \
+                         "for word the section of the transcript that is the query. Ignore the rest of the unrelated " \
+                         "transcript. Keep in mind that sometimes context from earlier parts of the conversation are " \
+                         "critical to understanding a query - make sure to include all the context needed to complete" \
+                         " the query well. There may be multiple people in the room or people on the phone. It's your" \
+                         " job to determine which part of the transcript is the query. The query should be a question" \
+                         " or a command or a statement directed at or highly related to " + \
+                         name + ".  It is ok if there are multiple parts of the query, or if multiple people appear " \
+                                "to be asking questions to" + name + ", it is ok to include all of those subsections " \
+                                                                     "in the query - just make sure to include the " \
+                                                                     "speaker annotation for each subsection."
 
     response = client.chat.completions.create(model="gpt-4",
                                               messages=[{"role": "system", "content": system_message},
